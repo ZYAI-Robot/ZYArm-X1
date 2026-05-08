@@ -1,0 +1,38 @@
+commands:
+  - name: reset
+    id: 1
+    params: []
+    line: "[CMD][1]\n"
+  - name: status
+    id: 6
+    params: []
+    line: "[CMD][6]\n"
+  - name: joint_io_fast
+    id: 36
+    params: [0, -180, 90, -999.9, 50, 1.25, 100]
+    line: "[CMD][36][0 -180 90 -999.900 50 1.250 100]\n"
+
+ack:
+  success:
+    line: "ACK_COMPLETED: CMD_ID=36, SUCCESS"
+    id: 36
+    accepted: true
+  error:
+    line: "ACK_COMPLETED: CMD_ID=6, ERROR"
+    id: 6
+    accepted: false
+
+status:
+  valid:
+    line: "[STATUS] J0:1 J1:-2.5 J2:3 J3:4.25 J4:5 J5:6 CLAW:7.5"
+    values: [1, -2.5, 3, 4.25, 5, 6, 7.5]
+  invalid:
+    line: "[STATUS] J0:bad J1:2 J2:3 J3:4 J4:5 J5:6 CLAW:7"
+
+master_data:
+  valid:
+    line: "[MD][4][10 20 30 40 50 60 70]"
+    frame_id: 4
+    values: [10, 20, 30, 40, 50, 60, 70]
+  invalid:
+    line: "[MD][4][10 20 30 40 50 60]"

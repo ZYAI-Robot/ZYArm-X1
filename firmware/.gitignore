@@ -1,0 +1,5 @@
+MDK-ARM/ArmV1
+Core/Inc/commit_id.h
+MDK-ARM/RTE/
+*.lst
+

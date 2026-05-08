@@ -1,0 +1,42 @@
+joint_limits:
+  # 这里的速度/加速度限制主要作用于 MoveIt 规划与时间参数化，不直接改固件极限。
+  joint0:
+    has_velocity_limits: true
+    max_velocity: 3.0
+    has_acceleration_limits: true
+    max_acceleration: 2.0
+  joint1:
+    has_velocity_limits: true
+    max_velocity: 3.0
+    has_acceleration_limits: true
+    max_acceleration: 2.0
+  joint2:
+    has_velocity_limits: true
+    max_velocity: 3.0
+    has_acceleration_limits: true
+    max_acceleration: 2.0
+  joint3:
+    has_velocity_limits: true
+    max_velocity: 4.0
+    has_acceleration_limits: true
+    max_acceleration: 3.0
+  joint4:
+    has_velocity_limits: true
+    max_velocity: 4.0
+    has_acceleration_limits: true
+    max_acceleration: 3.0
+  joint5:
+    has_velocity_limits: true
+    max_velocity: 4.0
+    has_acceleration_limits: true
+    max_acceleration: 3.0
+  joint6:
+    has_velocity_limits: true
+    max_velocity: 0.12
+    has_acceleration_limits: true
+    max_acceleration: 0.2
+  joint7:
+    has_velocity_limits: true
+    max_velocity: 0.12
+    has_acceleration_limits: true
+    max_acceleration: 0.2

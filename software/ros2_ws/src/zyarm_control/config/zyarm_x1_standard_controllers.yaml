@@ -1,0 +1,60 @@
+zyarm_x1_standard_controller_manager:
+  ros__parameters:
+    # 该文件是 default/non-gazebo 投影，单一事实来源见 controller_contract.yaml。
+    update_rate: 100
+
+    # 发布所有关节状态，供 TF、RViz、MoveIt 等上层使用。
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    # 机械臂本体 6 轴轨迹控制器。
+    arm_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+    # 夹爪单独拆成一个轨迹控制器，避免与机械臂动作耦合。
+    gripper_controller:
+      type: joint_trajectory_controller/JointTrajectoryController
+
+arm_controller:
+  ros__parameters:
+    # 机械臂 6 个旋转关节。
+    joints:
+      - joint0
+      - joint1
+      - joint2
+      - joint3
+      - joint4
+      - joint5
+    # 当前仅按位置控制，状态回读位置和速度。
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    # 这些频率和约束主要影响 action 监控与状态发布节奏。
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.01
+      goal_time: 0.0
+
+gripper_controller:
+  ros__parameters:
+    # 非 Gazebo 模式下只控制主夹爪关节，另一侧由模型 mimic。
+    joints:
+      - joint6
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.01
+      goal_time: 0.0
+
+joint_state_broadcaster:
+  ros__parameters: {}

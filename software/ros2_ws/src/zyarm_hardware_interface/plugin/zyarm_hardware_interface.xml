@@ -1,0 +1,10 @@
+<library path="zyarm_hardware_interface">
+  <class
+    name="zyarm_hardware_interface/ZyArmSystemHardware"
+    type="zyarm_hardware_interface::ZyArmSystemHardware"
+    base_class_type="hardware_interface::SystemInterface">
+    <description>
+      ZyArm real-hardware SystemInterface using firmware CMD36 for position-only ros2_control.
+    </description>
+  </class>
+</library>

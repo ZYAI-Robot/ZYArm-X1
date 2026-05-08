@@ -1,0 +1,26 @@
+# Python bytecode and local caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Native build outputs
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+software/diagnostics/stresstest
+
+# OS and editor metadata
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

@@ -1,0 +1,740 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     Runtime xacro integration keeps the existing ROS 2 control, Gazebo and hardware semantics.
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="zyarm_x1_standard"
+  xmlns:xacro="http://www.ros.org/wiki/xacro">
+  <!-- use_ros2_control=false: 只做模型显示或真机串口桥接 -->
+  <!-- use_ros2_control=true:  展开 ros2_control 标签，供控制器链和 MoveIt 仿真链使用 -->
+  <xacro:arg name="use_ros2_control" default="true" />
+  <xacro:arg name="use_gazebo" default="false" />
+  <xacro:arg name="use_sim_cameras" default="false" />
+  <xacro:arg name="use_real_hardware_interface" default="false" />
+  <xacro:arg name="real_hardware_port" default="/dev/ttyUSB0" />
+  <xacro:arg name="real_hardware_baud_rate" default="230400" />
+  <xacro:arg name="real_hardware_read_timeout_ms" default="20" />
+  <xacro:arg name="real_hardware_write_timeout_ms" default="20" />
+  <xacro:arg name="real_hardware_activation_status_timeout_ms" default="1000" />
+  <xacro:arg name="real_hardware_status_stale_warn_ms" default="100" />
+  <xacro:arg name="real_hardware_status_stale_error_ms" default="1000" />
+  <xacro:arg name="real_hardware_stale_log_period_ms" default="2000" />
+  <xacro:arg name="real_hardware_reset_rts_dtr" default="false" />
+  <xacro:arg name="real_hardware_reset_rts_dtr_quiet_ms" default="0" />
+  <xacro:arg name="real_hardware_arm_hw_offsets_deg" default="0 -180 90 0 0 0" />
+  <xacro:arg name="real_hardware_arm_hw_signs" default="1 1 1 1 1 1" />
+  <xacro:arg name="real_hardware_claw_travel_m" default="0.034" />
+  <xacro:arg name="real_hardware_claw_command_max" default="100" />
+  <xacro:arg
+    name="gazebo_camera_config_file"
+    default="" />
+  <xacro:arg
+    name="gazebo_controller_config_file"
+    default="" />
+  <xacro:property name="use_ros2_control" value="$(arg use_ros2_control)" />
+  <xacro:property name="use_gazebo" value="$(arg use_gazebo)" />
+  <xacro:property name="use_sim_cameras" value="$(arg use_sim_cameras)" />
+  <xacro:property name="use_real_hardware_interface" value="$(arg use_real_hardware_interface)" />
+  <xacro:property name="arm_effort_limit" value="60.0" />
+  <xacro:property name="gripper_effort_limit" value="160.0" />
+  <xacro:property name="arm_base_velocity_limit" value="3.0" />
+  <xacro:property name="arm_wrist_velocity_limit" value="4.0" />
+  <xacro:property name="gripper_velocity_limit" value="0.12" />
+  <xacro:property
+    name="gazebo_camera_config_file"
+    value="$(arg gazebo_camera_config_file)" />
+  <xacro:property
+    name="gazebo_controller_config_file"
+    value="$(arg gazebo_controller_config_file)" />
+  <!-- 下方主体仍基本保持 SolidWorks 导出结构，减少手工改动带来的模型漂移。 -->
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="0.00091157 -0.00062627 -0.075733"
+        rpy="0 0 0" />
+      <mass
+        value="0.26029" />
+      <inertia
+        ixx="0.00028525"
+        ixy="-9.6012E-07"
+        ixz="4.2857E-06"
+        iyy="0.00026365"
+        iyz="-1.2773E-06"
+        izz="0.00047532" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="link1">
+    <inertial>
+      <origin
+        xyz="0.018353 -7.2605E-08 -0.013108"
+        rpy="0 0 0" />
+      <mass
+        value="0.12888" />
+      <inertia
+        ixx="6.1663E-05"
+        ixy="1.6593E-10"
+        ixz="-1.5674E-05"
+        iyy="8.0681E-05"
+        iyz="-2.0696E-10"
+        izz="8.7038E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint0"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="link1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1415"
+      upper="3.1415"
+      effort="${arm_effort_limit}"
+      velocity="${arm_base_velocity_limit}" />
+  </joint>
+  <link
+    name="link2">
+    <inertial>
+      <origin
+        xyz="0.1142 -0.0004833 4.5225E-07"
+        rpy="0 0 0" />
+      <mass
+        value="0.18935" />
+      <inertia
+        ixx="4.7355E-05"
+        ixy="1.0633E-05"
+        ixz="3.8212E-10"
+        iyy="0.00030578"
+        iyz="6.2531E-13"
+        izz="0.00031996" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint1"
+    type="revolute">
+    <origin
+      xyz="0.037 0 0"
+      rpy="-1.5708 -3.1416 0" />
+    <parent
+      link="link1" />
+    <child
+      link="link2" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-0.05"
+      upper="3.17659"
+      effort="${arm_effort_limit}"
+      velocity="${arm_base_velocity_limit}" />
+  </joint>
+  <link
+    name="link3">
+    <inertial>
+      <origin
+        xyz="0.022342 0.013918 1.0102E-06"
+        rpy="0 0 0" />
+      <mass
+        value="0.11556" />
+      <inertia
+        ixx="2.8305E-05"
+        ixy="-1.401E-05"
+        ixz="3.0938E-09"
+        iyy="4.826E-05"
+        iyz="1.2509E-09"
+        izz="5.5117E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint2"
+    type="revolute">
+    <origin
+      xyz="0.27 0.0024 0"
+      rpy="0 0 1.5708" />
+    <parent
+      link="link2" />
+    <child
+      link="link3" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1766"
+      upper="0.035"
+      effort="${arm_effort_limit}"
+      velocity="${arm_base_velocity_limit}" />
+  </joint>
+  <link
+    name="link4">
+    <inertial>
+      <origin
+        xyz="3.359E-07 0.0002305 0.05375"
+        rpy="0 0 0" />
+      <mass
+        value="0.063014" />
+      <inertia
+        ixx="9.4194E-05"
+        ixy="-1.8203E-13"
+        ixz="-4.9372E-12"
+        iyy="9.4837E-05"
+        iyz="3.6101E-07"
+        izz="1.4643E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint3"
+    type="revolute">
+    <origin
+      xyz="0.039913 0.19 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="link3" />
+    <child
+      link="link4" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1416"
+      upper="3.1416"
+      effort="${arm_effort_limit}"
+      velocity="${arm_wrist_velocity_limit}" />
+  </joint>
+  <link
+    name="link5">
+    <inertial>
+      <origin
+        xyz="0.0064731 0.033728 0.00014092"
+        rpy="0 0 0" />
+      <mass
+        value="0.055716" />
+      <inertia
+        ixx="2.4408E-05"
+        ixy="-1.842E-06"
+        ixz="4.2863E-08"
+        iyy="2.7394E-05"
+        iyz="2.2654E-07"
+        izz="2.3787E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint4"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="-1.5708 0 0" />
+    <parent
+      link="link4" />
+    <child
+      link="link5" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.745"
+      upper="1.745"
+      effort="${arm_effort_limit}"
+      velocity="${arm_wrist_velocity_limit}" />
+  </joint>
+  <link
+    name="link6">
+    <inertial>
+      <origin
+        xyz="0.0056408 7.3513E-06 -0.10669"
+        rpy="0 0 0" />
+      <mass
+        value="0.073553" />
+      <inertia
+        ixx="6.3575E-05"
+        ixy="5.4249E-08"
+        ixz="-2.3601E-06"
+        iyy="2.4372E-05"
+        iyz="5.4471E-09"
+        izz="5.8246E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link6.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link6.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint5"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="link5" />
+    <child
+      link="link6" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1416"
+      upper="3.1416"
+      effort="${arm_effort_limit}"
+      velocity="${arm_wrist_velocity_limit}" />
+  </joint>
+  <link
+    name="claw1">
+    <inertial>
+      <origin
+        xyz="0.0089049 0.035115 5.5012E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.020468" />
+      <inertia
+        ixx="5.8019E-06"
+        ixy="-6.6705E-07"
+        ixz="-8.8771E-09"
+        iyy="2.5773E-06"
+        iyz="-2.527E-08"
+        izz="4.3825E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/claw1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/claw1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint6"
+    type="prismatic">
+    <origin
+      xyz="0 0 -0.18675"
+      rpy="1.5708 0 -1.5708" />
+    <parent
+      link="link6" />
+    <child
+      link="claw1" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="0"
+      upper="0.034"
+      effort="${gripper_effort_limit}"
+      velocity="${gripper_velocity_limit}" />
+  </joint>
+  <link
+    name="claw2">
+    <inertial>
+      <origin
+        xyz="0.0089049 0.035115 5.5012E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.020468" />
+      <inertia
+        ixx="5.8019E-06"
+        ixy="-6.6705E-07"
+        ixz="-8.8771E-09"
+        iyy="2.5773E-06"
+        iyz="-2.527E-08"
+        izz="4.3825E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/claw2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/claw2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint7"
+    type="prismatic">
+    <origin
+      xyz="0 0 -0.18675"
+      rpy="1.5708 0 1.5708" />
+    <parent
+      link="link6" />
+    <child
+      link="claw2" />
+    <axis
+      xyz="1 0 0" />
+    <xacro:unless value="${use_gazebo}">
+      <mimic
+        joint="joint6"
+        multiplier="1.0"
+        offset="0.0" />
+    </xacro:unless>
+    <limit
+      lower="0"
+      upper="0.034"
+      effort="${gripper_effort_limit}"
+      velocity="${gripper_velocity_limit}" />
+  </joint>
+  <link name="ee_link" />
+  <joint name="ee_fixed_joint" type="fixed">
+    <parent link="link6" />
+    <child link="ee_link" />
+    <origin xyz="0 0 -0.18675" rpy="1.5708 0 0" />
+  </joint>
+  <xacro:if value="${use_sim_cameras}">
+    <xacro:property
+      name="gazebo_camera_frames"
+      value="${xacro.load_yaml(gazebo_camera_config_file)['camera_frames']}" />
+    <link name="${gazebo_camera_frames['fixed']['link_frame']}" />
+    <joint name="camera_fixed_joint" type="fixed">
+      <parent link="base_link" />
+      <child link="${gazebo_camera_frames['fixed']['link_frame']}" />
+      <origin xyz="0.05 -0.30 0.45" rpy="-1.1 0 0" />
+    </joint>
+    <link name="${gazebo_camera_frames['fixed']['optical_frame']}" />
+    <joint name="camera_fixed_optical_joint" type="fixed">
+      <parent link="${gazebo_camera_frames['fixed']['link_frame']}" />
+      <child link="${gazebo_camera_frames['fixed']['optical_frame']}" />
+      <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708" />
+    </joint>
+    <link name="${gazebo_camera_frames['wrist']['link_frame']}" />
+    <joint name="camera_wrist_joint" type="fixed">
+      <parent link="ee_link" />
+      <child link="${gazebo_camera_frames['wrist']['link_frame']}" />
+      <origin xyz="0.04 0.0 0.02" rpy="-1.57 0 -1.57" />
+    </joint>
+    <link name="${gazebo_camera_frames['wrist']['optical_frame']}" />
+    <joint name="camera_wrist_optical_joint" type="fixed">
+      <parent link="${gazebo_camera_frames['wrist']['link_frame']}" />
+      <child link="${gazebo_camera_frames['wrist']['optical_frame']}" />
+      <origin xyz="0 0 0" rpy="-1.5708 0 -1.5708" />
+    </joint>
+  </xacro:if>
+  <xacro:if value="${use_ros2_control}">
+    <ros2_control name="ZyarmX1StandardSystem" type="system">
+      <hardware>
+        <xacro:if value="${use_real_hardware_interface}">
+          <plugin>zyarm_hardware_interface/ZyArmSystemHardware</plugin>
+          <param name="port">$(arg real_hardware_port)</param>
+          <param name="baud_rate">$(arg real_hardware_baud_rate)</param>
+          <param name="read_timeout_ms">$(arg real_hardware_read_timeout_ms)</param>
+          <param name="write_timeout_ms">$(arg real_hardware_write_timeout_ms)</param>
+          <param name="activation_status_timeout_ms">$(arg real_hardware_activation_status_timeout_ms)</param>
+          <param name="status_stale_warn_ms">$(arg real_hardware_status_stale_warn_ms)</param>
+          <param name="status_stale_error_ms">$(arg real_hardware_status_stale_error_ms)</param>
+          <param name="stale_log_period_ms">$(arg real_hardware_stale_log_period_ms)</param>
+          <param name="reset_rts_dtr">$(arg real_hardware_reset_rts_dtr)</param>
+          <param name="reset_rts_dtr_quiet_ms">$(arg real_hardware_reset_rts_dtr_quiet_ms)</param>
+          <param name="arm_hw_offsets_deg">$(arg real_hardware_arm_hw_offsets_deg)</param>
+          <param name="arm_hw_signs">$(arg real_hardware_arm_hw_signs)</param>
+          <param name="claw_travel_m">$(arg real_hardware_claw_travel_m)</param>
+          <param name="claw_command_max">$(arg real_hardware_claw_command_max)</param>
+        </xacro:if>
+        <xacro:unless value="${use_real_hardware_interface}">
+          <xacro:if value="${use_gazebo}">
+            <plugin>gz_ros2_control/GazeboSimSystem</plugin>
+          </xacro:if>
+          <xacro:unless value="${use_gazebo}">
+            <plugin>mock_components/GenericSystem</plugin>
+          </xacro:unless>
+        </xacro:unless>
+      </hardware>
+      <joint name="joint0">
+        <command_interface name="position" />
+        <state_interface name="position" />
+        <xacro:unless value="${use_real_hardware_interface}">
+          <state_interface name="velocity" />
+        </xacro:unless>
+      </joint>
+      <joint name="joint1">
+        <command_interface name="position" />
+        <state_interface name="position" />
+        <xacro:unless value="${use_real_hardware_interface}">
+          <state_interface name="velocity" />
+        </xacro:unless>
+      </joint>
+      <joint name="joint2">
+        <command_interface name="position" />
+        <state_interface name="position" />
+        <xacro:unless value="${use_real_hardware_interface}">
+          <state_interface name="velocity" />
+        </xacro:unless>
+      </joint>
+      <joint name="joint3">
+        <command_interface name="position" />
+        <state_interface name="position" />
+        <xacro:unless value="${use_real_hardware_interface}">
+          <state_interface name="velocity" />
+        </xacro:unless>
+      </joint>
+      <joint name="joint4">
+        <command_interface name="position" />
+        <state_interface name="position" />
+        <xacro:unless value="${use_real_hardware_interface}">
+          <state_interface name="velocity" />
+        </xacro:unless>
+      </joint>
+      <joint name="joint5">
+        <command_interface name="position" />
+        <state_interface name="position" />
+        <xacro:unless value="${use_real_hardware_interface}">
+          <state_interface name="velocity" />
+        </xacro:unless>
+      </joint>
+      <joint name="joint6">
+        <command_interface name="position" />
+        <state_interface name="position" />
+        <xacro:unless value="${use_real_hardware_interface}">
+          <state_interface name="velocity" />
+        </xacro:unless>
+      </joint>
+      <xacro:if value="${use_gazebo and not use_real_hardware_interface}">
+        <joint name="joint7">
+          <command_interface name="position" />
+          <state_interface name="position" />
+          <state_interface name="velocity" />
+        </joint>
+      </xacro:if>
+    </ros2_control>
+  </xacro:if>
+  <xacro:if value="${use_gazebo}">
+    <xacro:if value="${use_ros2_control}">
+      <gazebo>
+        <plugin filename="libgz_ros2_control-system.so" name="gz_ros2_control::GazeboSimROS2ControlPlugin">
+          <controller_manager_name>zyarm_x1_standard_controller_manager</controller_manager_name>
+          <xacro:if value="${gazebo_controller_config_file != ''}">
+            <parameters>${gazebo_controller_config_file}</parameters>
+          </xacro:if>
+          <xacro:unless value="${gazebo_controller_config_file != ''}">
+            <parameters>$(find zyarm_control)/config/zyarm_x1_standard_gazebo_controllers.yaml</parameters>
+          </xacro:unless>
+        </plugin>
+      </gazebo>
+    </xacro:if>
+  </xacro:if>
+  <xacro:if value="${use_gazebo}">
+    <xacro:if value="${use_sim_cameras}">
+      <gazebo reference="${gazebo_camera_frames['fixed']['link_frame']}">
+        <sensor name="fixed_rgb" type="camera">
+          <always_on>true</always_on>
+          <update_rate>30</update_rate>
+          <topic>${gazebo_camera_frames['fixed']['image_topic']}</topic>
+          <camera>
+            <horizontal_fov>1.05</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.01</near>
+              <far>5.0</far>
+            </clip>
+          </camera>
+        </sensor>
+      </gazebo>
+      <gazebo reference="${gazebo_camera_frames['wrist']['link_frame']}">
+        <sensor name="wrist_rgb" type="camera">
+          <always_on>true</always_on>
+          <update_rate>30</update_rate>
+          <topic>${gazebo_camera_frames['wrist']['image_topic']}</topic>
+          <camera>
+            <horizontal_fov>1.10</horizontal_fov>
+            <image>
+              <width>640</width>
+              <height>480</height>
+              <format>R8G8B8</format>
+            </image>
+            <clip>
+              <near>0.01</near>
+              <far>3.0</far>
+            </clip>
+          </camera>
+        </sensor>
+      </gazebo>
+    </xacro:if>
+  </xacro:if>
+</robot>

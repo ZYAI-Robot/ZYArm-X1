@@ -1,0 +1,511 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="zyarm_x1_standard">
+  <link
+    name="base_link">
+    <inertial>
+      <origin
+        xyz="0.00091157 -0.00062627 -0.075733"
+        rpy="0 0 0" />
+      <mass
+        value="0.26029" />
+      <inertia
+        ixx="0.00028525"
+        ixy="-9.6012E-07"
+        ixz="4.2857E-06"
+        iyy="0.00026365"
+        iyz="-1.2773E-06"
+        izz="0.00047532" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/base_link.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/base_link.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="link1">
+    <inertial>
+      <origin
+        xyz="0.018353 -7.2605E-08 -0.013108"
+        rpy="0 0 0" />
+      <mass
+        value="0.12888" />
+      <inertia
+        ixx="6.1663E-05"
+        ixy="1.6593E-10"
+        ixz="-1.5674E-05"
+        iyy="8.0681E-05"
+        iyz="-2.0696E-10"
+        izz="8.7038E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint0"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="0 0 0" />
+    <parent
+      link="base_link" />
+    <child
+      link="link1" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1415"
+      upper="3.1415"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="link2">
+    <inertial>
+      <origin
+        xyz="0.1142 -0.0004833 4.5225E-07"
+        rpy="0 0 0" />
+      <mass
+        value="0.18935" />
+      <inertia
+        ixx="4.7355E-05"
+        ixy="1.0633E-05"
+        ixz="3.8212E-10"
+        iyy="0.00030578"
+        iyz="6.2531E-13"
+        izz="0.00031996" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint1"
+    type="revolute">
+    <origin
+      xyz="0.037 0 0"
+      rpy="-1.5708 -3.1416 0" />
+    <parent
+      link="link1" />
+    <child
+      link="link2" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="0"
+      upper="3.1416"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="link3">
+    <inertial>
+      <origin
+        xyz="0.022342 0.013918 1.0102E-06"
+        rpy="0 0 0" />
+      <mass
+        value="0.11556" />
+      <inertia
+        ixx="2.8305E-05"
+        ixy="-1.401E-05"
+        ixz="3.0938E-09"
+        iyy="4.826E-05"
+        iyz="1.2509E-09"
+        izz="5.5117E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link3.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link3.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint2"
+    type="revolute">
+    <origin
+      xyz="0.27 0.0024 0"
+      rpy="0 0 1.5708" />
+    <parent
+      link="link2" />
+    <child
+      link="link3" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1416"
+      upper="0"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="link4">
+    <inertial>
+      <origin
+        xyz="3.359E-07 0.0002305 0.05375"
+        rpy="0 0 0" />
+      <mass
+        value="0.063014" />
+      <inertia
+        ixx="9.4194E-05"
+        ixy="-1.8203E-13"
+        ixz="-4.9372E-12"
+        iyy="9.4837E-05"
+        iyz="3.6101E-07"
+        izz="1.4643E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link4.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link4.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint3"
+    type="revolute">
+    <origin
+      xyz="0.039913 0.19 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="link3" />
+    <child
+      link="link4" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1416"
+      upper="3.1416"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="link5">
+    <inertial>
+      <origin
+        xyz="0.0064731 0.033728 0.00014092"
+        rpy="0 0 0" />
+      <mass
+        value="0.055716" />
+      <inertia
+        ixx="2.4408E-05"
+        ixy="-1.842E-06"
+        ixz="4.2863E-08"
+        iyy="2.7394E-05"
+        iyz="2.2654E-07"
+        izz="2.3787E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link5.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link5.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint4"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="-1.5708 0 0" />
+    <parent
+      link="link4" />
+    <child
+      link="link5" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-1.745"
+      upper="1.745"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="link6">
+    <inertial>
+      <origin
+        xyz="0.0056408 7.3513E-06 -0.10669"
+        rpy="0 0 0" />
+      <mass
+        value="0.073553" />
+      <inertia
+        ixx="6.3575E-05"
+        ixy="5.4249E-08"
+        ixz="-2.3601E-06"
+        iyy="2.4372E-05"
+        iyz="5.4471E-09"
+        izz="5.8246E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link6.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/link6.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint5"
+    type="revolute">
+    <origin
+      xyz="0 0 0"
+      rpy="1.5708 0 0" />
+    <parent
+      link="link5" />
+    <child
+      link="link6" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      lower="-3.1416"
+      upper="3.1416"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="claw1">
+    <inertial>
+      <origin
+        xyz="0.0089049 0.035115 5.5012E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.020468" />
+      <inertia
+        ixx="5.8019E-06"
+        ixy="-6.6705E-07"
+        ixz="-8.8771E-09"
+        iyy="2.5773E-06"
+        iyz="-2.527E-08"
+        izz="4.3825E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/claw1.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/claw1.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint6"
+    type="prismatic">
+    <origin
+      xyz="0 0 -0.18675"
+      rpy="1.5708 0 -1.5708" />
+    <parent
+      link="link6" />
+    <child
+      link="claw1" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="0"
+      upper="0.034"
+      effort="0"
+      velocity="0" />
+  </joint>
+  <link
+    name="claw2">
+    <inertial>
+      <origin
+        xyz="0.0089049 0.035115 5.5012E-05"
+        rpy="0 0 0" />
+      <mass
+        value="0.020468" />
+      <inertia
+        ixx="5.8019E-06"
+        ixy="-6.6705E-07"
+        ixz="-8.8771E-09"
+        iyy="2.5773E-06"
+        iyz="-2.527E-08"
+        izz="4.3825E-06" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/claw2.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.75294 0.75294 0.75294 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://zyarm_description/meshes/x1_standard/claw2.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="joint7"
+    type="prismatic">
+    <origin
+      xyz="0 0 -0.18675"
+      rpy="1.5708 0 1.5708" />
+    <parent
+      link="link6" />
+    <child
+      link="claw2" />
+    <axis
+      xyz="1 0 0" />
+    <limit
+      lower="0"
+      upper="0.034"
+      effort="0"
+      velocity="0" />
+  </joint>
+</robot>

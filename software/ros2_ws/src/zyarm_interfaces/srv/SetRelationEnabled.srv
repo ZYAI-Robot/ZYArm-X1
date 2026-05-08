@@ -1,0 +1,4 @@
+bool enabled
+---
+bool accepted
+string message

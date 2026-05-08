@@ -1,0 +1,79 @@
+controller_manager:
+  name: zyarm_x1_standard_controller_manager
+  update_rate: 100
+  real_update_rate: 50
+
+real_hardware_standard_control:
+  backend: zyarm_hardware_interface
+  moveit_launch: demo_x1_standard_real.launch.py
+  bringup_launch: bringup_x1_standard_real_ros2_control.launch.py
+
+controllers:
+  joint_state_broadcaster:
+    type: joint_state_broadcaster/JointStateBroadcaster
+
+  arm_controller:
+    type: joint_trajectory_controller/JointTrajectoryController
+    action_type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    real_state_interfaces:
+      - position
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.01
+      goal_time: 0.0
+    joints:
+      default:
+        - joint0
+        - joint1
+        - joint2
+        - joint3
+        - joint4
+        - joint5
+      gazebo:
+        - joint0
+        - joint1
+        - joint2
+        - joint3
+        - joint4
+        - joint5
+      real_ros2_control:
+        - joint0
+        - joint1
+        - joint2
+        - joint3
+        - joint4
+        - joint5
+
+  gripper_controller:
+    type: joint_trajectory_controller/JointTrajectoryController
+    action_type: FollowJointTrajectory
+    action_ns: follow_joint_trajectory
+    command_interfaces:
+      - position
+    state_interfaces:
+      - position
+      - velocity
+    real_state_interfaces:
+      - position
+    state_publish_rate: 50.0
+    action_monitor_rate: 20.0
+    allow_partial_joints_goal: false
+    constraints:
+      stopped_velocity_tolerance: 0.01
+      goal_time: 0.0
+    joints:
+      default:
+        - joint6
+      gazebo:
+        - joint6
+        - joint7
+      real_ros2_control:
+        - joint6

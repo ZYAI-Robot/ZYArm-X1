@@ -1,0 +1,2 @@
+# 历史工具链仍可能依赖这份关节名列表，保留它作为 x1_standard 的统一命名参考。
+controller_joint_names: ['', 'joint0', 'joint1', 'joint2', 'joint3', 'joint4', 'joint5', 'joint6']

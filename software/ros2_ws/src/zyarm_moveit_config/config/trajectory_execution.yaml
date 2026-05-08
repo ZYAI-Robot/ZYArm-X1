@@ -1,0 +1,9 @@
+trajectory_execution:
+  # 轨迹执行监控阈值。真机链路存在串口桥接时，适度放宽时间裕量更稳妥。
+  allowed_execution_duration_scaling: 1.2
+  allowed_goal_duration_margin: 0.5
+  allowed_start_tolerance: 0.01
+  execution_duration_monitoring: false
+
+# 控制器由外部 bringup 负责拉起，MoveIt 只负责使用，不负责管理生命周期。
+moveit_manage_controllers: false

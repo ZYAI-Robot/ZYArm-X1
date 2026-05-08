@@ -1,0 +1,5 @@
+float64[7] positions
+bool[7] apply_mask
+---
+bool accepted
+string message

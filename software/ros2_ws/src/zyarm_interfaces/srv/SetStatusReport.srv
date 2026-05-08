@@ -1,0 +1,5 @@
+bool enabled
+float64 frequency_hz
+---
+bool accepted
+string message

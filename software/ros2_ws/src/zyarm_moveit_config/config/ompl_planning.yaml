@@ -1,0 +1,39 @@
+planning_plugins:
+  - ompl_interface/OMPLPlanner
+# 这些 adapters 负责在规划前后自动做边界检查、时间参数化和结果校验。
+request_adapters:
+  - default_planning_request_adapters/ResolveConstraintFrames
+  - default_planning_request_adapters/ValidateWorkspaceBounds
+  - default_planning_request_adapters/CheckStartStateBounds
+  - default_planning_request_adapters/CheckStartStateCollision
+  - default_planning_request_adapters/CheckForStackedConstraints
+response_adapters:
+  - default_planning_response_adapters/AddTimeOptimalParameterization
+  - default_planning_response_adapters/ValidateSolution
+  - default_planning_response_adapters/DisplayMotionPath
+start_state_max_bounds_error: 0.1
+
+planner_configs:
+  # 当前保留一组够用的 OMPL 规划器，后续可以按任务再细调。
+  RRTConnect:
+    type: geometric::RRTConnect
+    range: 0.0
+  RRTstar:
+    type: geometric::RRTstar
+    delay_collision_checking: 1
+  PRMstar:
+    type: geometric::PRMstar
+
+arm:
+  # 机械臂主规划组开放多个规划器选择。
+  planner_configs:
+    - RRTConnect
+    - RRTstar
+    - PRMstar
+  longest_valid_segment_fraction: 0.01
+
+gripper:
+  # 夹爪规划相对简单，默认只保留一个快速规划器。
+  planner_configs:
+    - RRTConnect
+  longest_valid_segment_fraction: 0.01

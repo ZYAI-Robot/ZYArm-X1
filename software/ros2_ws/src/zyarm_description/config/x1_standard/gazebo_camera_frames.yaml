@@ -1,0 +1,9 @@
+camera_frames:
+  fixed:
+    link_frame: camera_fixed_link
+    optical_frame: camera_fixed_optical_frame
+    image_topic: /camera_fixed/color/image_raw
+  wrist:
+    link_frame: camera_wrist_link
+    optical_frame: camera_wrist_optical_frame
+    image_topic: /camera_wrist/color/image_raw

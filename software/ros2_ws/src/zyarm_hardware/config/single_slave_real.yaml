@@ -1,0 +1,18 @@
+arms:
+  slave:
+    port: /dev/ttyUSB0
+    baudrate: 230400
+    timeout_s: 0.1
+    write_timeout_s: 0.1
+    ack_timeout_s: 0.2
+    reset_rts_dtr: true
+    reset_rts_dtr_quiet_s: 3.0
+    log_serial: false
+    log_dir: /tmp
+    startup_reset: true
+    status_report_frequency_hz: 50.0
+    claw_travel_m: 0.034
+    claw_command_max: 100.0
+    arm_hw_offsets_deg: [0.0, -180.0, 90.0, 0.0, 0.0, 0.0]
+    arm_hw_signs: [1.0, 1.0, 1.0, 1.0, 1.0, 1.0]
+relationships: {}

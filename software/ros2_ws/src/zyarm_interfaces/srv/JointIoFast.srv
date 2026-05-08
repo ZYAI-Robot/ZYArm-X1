@@ -1,0 +1,7 @@
+float64[7] positions
+bool[7] apply_mask
+---
+bool accepted
+string message
+float64[7] measured_positions
+bool measured_valid

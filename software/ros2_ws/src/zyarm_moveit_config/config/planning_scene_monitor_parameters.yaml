@@ -1,0 +1,5 @@
+# 打开这些开关后，MoveIt 会持续发布规划场景、几何、状态和 TF 更新。
+publish_planning_scene: true
+publish_geometry_updates: true
+publish_state_updates: true
+publish_transforms_updates: true

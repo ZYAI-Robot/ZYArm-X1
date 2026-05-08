@@ -1,0 +1,19 @@
+<?xml version="1.0"?>
+<sdf version="1.9">
+  <model name="goal_zone">
+    <static>true</static>
+    <link name="goal_link">
+      <visual name="visual">
+        <geometry>
+          <box>
+            <size>${GOAL_ZONE_SIZE}</size>
+          </box>
+        </geometry>
+        <material>
+          <ambient>0.15 0.65 0.25 1</ambient>
+          <diffuse>0.15 0.65 0.25 1</diffuse>
+        </material>
+      </visual>
+    </link>
+  </model>
+</sdf>
