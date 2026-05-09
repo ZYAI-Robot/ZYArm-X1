@@ -45,8 +45,8 @@ docs/assets/Diagrams/example-name.png
 资源文件名应使用稳定的英文 kebab-case，并体现章节和用途。例如：
 
 ```text
-readme-learning-roadmap.svg
-readme-learning-roadmap.png
+docs-learning-roadmap.svg
+docs-learning-roadmap.png
 product-positioning-overview.svg
 product-positioning-overview.png
 quickstart-serial-status.png
