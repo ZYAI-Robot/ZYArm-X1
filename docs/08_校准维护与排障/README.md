@@ -25,7 +25,8 @@
 | 动作方向不对 | 零位、offset、关节方向、SDK/固件角度表达 |
 | 动作卡顿或抖动 | 速度、控制频率、串口稳定性、负载、滤波参数 |
 | ROS 2 launch 报错 | ROS 环境、workspace 是否编译、包名和 `x1_standard` 资源 |
-| Web 页面无法启动 | Node.js、pnpm、依赖安装、端口占用 |
+| 官方 Web 页面打不开 | 网络、DNS、代理、浏览器或现场网络策略 |
+| Web 页面无法连接串口 | Chrome/Edge、Web Serial 权限、USB 线、驱动、串口占用 |
 | LeRobot 无法导入插件 | `lerobot==0.5.1`、editable install、Python 环境 |
 | 摄像头打不开 | 摄像头 index、权限、占用、分辨率和 fps |
 

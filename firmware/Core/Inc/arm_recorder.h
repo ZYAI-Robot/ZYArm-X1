@@ -6,6 +6,7 @@
 #include "arm_flash.h"
 #include "arm_robot_config.h"
 #include "w25q128.h"
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -50,7 +51,7 @@ void arm_record_stop(void);
 int arm_record_player_start(const char *name);
 int arm_record_info_show(const char *name);
 int arm_record_flash_erase(const char *name);
-void arm_record_manger_list(void);
+void arm_record_manger_list(uint32_t cmd_id);
 int arm_record_flash_malloc(void);
 
 #ifdef __cplusplus

@@ -2,7 +2,7 @@
 
 本章面向希望使用 ZYArm 做遥操、数据采集、数据集回放、策略评估和算法实验的用户。它默认你使用项目已经提供的 LeRobot、Python SDK 和固件能力，不要求你修改源码。
 
-如果你的目标是修改 LeRobot 插件、调整 observation/action 字段、扩展相机配置或升级 LeRobot 版本，请阅读 [LeRobot 开发](../09_开发者指南/07_LeRobot开发/README.md)。本章回答“怎么用现有能力做实验”，开发者指南回答“怎么改和维护插件”。
+如果你的目标是修改 LeRobot 插件、调整 observation/action 字段、扩展相机配置或升级 LeRobot 版本，请阅读 [LeRobot 开发](../09_开发者指南/06_LeRobot开发/README.md)。本章回答“怎么用现有能力做实验”，开发者指南回答“怎么改和维护插件”。
 
 ## 阅读前提
 
@@ -74,9 +74,9 @@
 | 录制一个可 replay 的数据集 | 本章 |
 | 检查相机视角和 episode 质量 | 本章 |
 | 评估训练好的 policy | 本章 |
-| 修改 `zyarm_follower` 或 `zyarm_leader` 的源码行为 | [LeRobot 开发](../09_开发者指南/07_LeRobot开发/README.md) |
-| 修改 observation/action 字段、单位或转换逻辑 | [LeRobot 开发](../09_开发者指南/07_LeRobot开发/README.md) |
-| 升级 LeRobot 版本或适配新的 API | [LeRobot 开发](../09_开发者指南/07_LeRobot开发/README.md) |
+| 修改 `zyarm_follower` 或 `zyarm_leader` 的源码行为 | [LeRobot 开发](../09_开发者指南/06_LeRobot开发/README.md) |
+| 修改 observation/action 字段、单位或转换逻辑 | [LeRobot 开发](../09_开发者指南/06_LeRobot开发/README.md) |
+| 升级 LeRobot 版本或适配新的 API | [LeRobot 开发](../09_开发者指南/06_LeRobot开发/README.md) |
 
 ## 总体链路
 

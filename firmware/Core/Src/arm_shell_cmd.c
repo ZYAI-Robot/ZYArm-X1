@@ -59,6 +59,7 @@ static void handle_ik_inverse(const ArmShellCmdPackage *cmd)
 {
     if (cmd->param_count < 6) {
         ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "ik_inverse need 6 params, got %d\n", cmd->param_count);
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
     
@@ -95,6 +96,59 @@ static void handle_ik_inverse(const ArmShellCmdPackage *cmd)
     send_ack_completed(cmd->cmd_id, ret);
 }
 
+static void handle_ik_solve(const ArmShellCmdPackage *cmd)
+{
+    if (cmd->param_count < 6) {
+        ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "ik_solve need 6 params, got %d\n", cmd->param_count);
+        send_ack_completed(cmd->cmd_id, -1);
+        return;
+    }
+
+    ArmPose target_pose = {0};
+    float solution[ARM_JOINTS_NO_CLAW_NUM] = {0};
+
+    target_pose.x = cmd->params[0];
+    target_pose.y = cmd->params[1];
+    target_pose.z = cmd->params[2];
+    target_pose.rx = cmd->params[3];
+    target_pose.ry = cmd->params[4];
+    target_pose.rz = cmd->params[5];
+
+    send_ack_received(cmd->cmd_id);
+
+    int ret = arm_joint_angle_update(false);
+    if (ret != 0) {
+        ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "Update joint angles failed\n");
+        send_ack_completed(cmd->cmd_id, ret);
+        return;
+    }
+
+    ret = arm_robot_ik_inner(&target_pose, solution);
+    if (ret != 0) {
+        send_ack_completed(cmd->cmd_id, ret);
+        return;
+    }
+
+    for (int i = 0; i < ARM_JOINTS_NO_CLAW_NUM; i++) {
+        if (!arm_joint_check_angle_valid(i, solution[i])) {
+            send_ack_completed(cmd->cmd_id, -1);
+            return;
+        }
+    }
+
+    send_string_response(
+        cmd->cmd_id,
+        "[IK_SOLUTION] J0:%.2f J1:%.2f J2:%.2f J3:%.2f J4:%.2f J5:%.2f\n",
+        solution[0],
+        solution[1],
+        solution[2],
+        solution[3],
+        solution[4],
+        solution[5]
+    );
+    send_ack_completed(cmd->cmd_id, 0);
+}
+
 static void handle_reset(const ArmShellCmdPackage *cmd)
 {
     int ret;
@@ -119,6 +173,7 @@ static void handle_joint_sync(const ArmShellCmdPackage *cmd)
 {
     if (cmd->param_count < 7) {
         ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "joint_sync need 7 params, got %d\n", cmd->param_count);
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
     
@@ -211,6 +266,7 @@ static void handle_set_joint(const ArmShellCmdPackage *cmd)
     // 检查参数个数
     if (cmd->param_count < 2) {
         ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "set_joint need 2 params, got %d\n", cmd->param_count);
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
     
@@ -303,6 +359,7 @@ static void handle_status_report(const ArmShellCmdPackage *cmd)
             ARM_SHELL_CMD_LOG_TAG,
             "status_report need 1 param: enable(0/1) [freq_hz]\n"
         );
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
 
@@ -448,6 +505,7 @@ static void handle_get_joint(const ArmShellCmdPackage *cmd)
 {
     if (cmd->param_count < 1) {
         ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "get_joint need 1 param, got %d\n", cmd->param_count);
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
 
@@ -466,6 +524,7 @@ static void handle_set_speed(const ArmShellCmdPackage *cmd)
 {
     if (cmd->param_count < 1) {
         ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "set_speed need 1 param, got %d\n", cmd->param_count);
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
 
@@ -487,6 +546,7 @@ static void handle_record(const ArmShellCmdPackage *cmd)
 {
     if (cmd->str_param == NULL || strlen(cmd->str_param) == 0) {
         ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "record need 1 params: record_name\n");
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
     send_ack_received(cmd->cmd_id);
@@ -500,6 +560,7 @@ static void handle_record_player(const ArmShellCmdPackage *cmd)
 {
     if (cmd->str_param == NULL || strlen(cmd->str_param) == 0) {
         ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "record_player need 1 params: record_name\n");
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
     send_ack_received(cmd->cmd_id);
@@ -520,7 +581,7 @@ static void handle_record_stop(const ArmShellCmdPackage *cmd)
 static void handle_record_list(const ArmShellCmdPackage *cmd) 
 {
     send_ack_received(cmd->cmd_id);
-    arm_record_manger_list();
+    arm_record_manger_list(cmd->cmd_id);
     send_ack_completed(cmd->cmd_id, 0);
 }
 
@@ -535,6 +596,7 @@ static void handle_record_show(const ArmShellCmdPackage *cmd)
 {
     if (cmd->str_param == NULL || strlen(cmd->str_param) == 0) {
         ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "record_show need 1 params: name\n");
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
     send_ack_received(cmd->cmd_id);
@@ -593,6 +655,7 @@ static void handle_remote_mode(const ArmShellCmdPackage *cmd)
 {
     if (cmd->param_count < 1) {
         ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "remote_mode need 1 param: mode\n");
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
     send_ack_received(cmd->cmd_id);
@@ -661,6 +724,7 @@ static void handle_set_joint_weights(const ArmShellCmdPackage *cmd)
             ARM_JOINTS_NO_CLAW_NUM,
             cmd->param_count
         );
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
 
@@ -692,6 +756,7 @@ static void handle_set_angle_threshold(const ArmShellCmdPackage *cmd)
             "set_angle_threshold need 1 param, got %d\n",
             cmd->param_count
         );
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
 
@@ -724,6 +789,7 @@ static void handle_master_slave(const ArmShellCmdPackage *cmd)
             ARM_SHELL_CMD_LOG_TAG,
             "master_slave need at least 1 param: role (1=master, 2=slave) [freq_hz]\n"
         );
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
 
@@ -800,6 +866,7 @@ static void handle_joint_io_fast(const ArmShellCmdPackage *cmd)
             ARM_JOINTS_NUM,
             cmd->param_count
         );
+        send_ack_completed(cmd->cmd_id, -1);
         return;
     }
 
@@ -870,6 +937,7 @@ const ArmShellCmd g_shell_cmd_list[] = {
     [CMD_ID_MASTER_SLAVE_SET_LPF] = {"master_slave_set_lpf", "Set LPF coefficient with 1 parameter: alpha [0.0-1.0]", handle_master_slave_set_lpf, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_GET_TRANSPORT_STATS] = {"get_transport_stats", "Get firmware UART1/UART6 communication health snapshot", handle_get_transport_stats, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_JOINT_IO_FAST] = {"joint_io_fast", "Batch read joint snapshot, fast sync move, and output [STATUS] with 7 parameters: j0 j1 j2 j3 j4 j5 claw", handle_joint_io_fast, CMD_PARSE_FORMAT_FLOAT},
+    [CMD_ID_IK_SOLVE] = {"ik_solve", "Calculate IK joint solution without moving with 6 parameters: x y z rx ry rz", handle_ik_solve, CMD_PARSE_FORMAT_FLOAT},
 };
 
 void shell_show_help()
@@ -885,6 +953,8 @@ void shell_show_help()
 
 void shell_handle_stop()
 {
+    arm_robot_request_stop();
+
     // 删除正在工作的任务
     if ((g_arm_robot.state != ARM_STATE_IDLE) 
             && (g_arm_robot.tasks_handle != NULL)) {

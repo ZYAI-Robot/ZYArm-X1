@@ -49,6 +49,7 @@ Servo g_servos[ARM_SERVO_NUM + 1] = {
 
 static const uint8_t g_arm_primary_servo_ids[ARM_JOINTS_NUM] = {1U, 2U, 4U, 6U, 7U, 8U, 9U};
 static const uint8_t g_arm_all_servo_ids[ARM_SERVO_NUM] = {1U, 2U, 3U, 4U, 5U, 6U, 7U, 8U, 9U};
+static volatile uint32_t g_arm_robot_stop_generation = 0U;
 
 // 机械臂实例
 ArmRobot g_arm_robot = {   
@@ -485,10 +486,17 @@ void arm_robot_set_sync(uint32_t sync_mask, bool sync)
     }
 }
 
+void arm_robot_request_stop(void)
+{
+    g_arm_robot_stop_generation++;
+    arm_robot_set_sync(ARM_ALL_JOINTS_SYNC_MASK, false);
+}
+
 bool arm_wait_sync_finished(int timeout_ms)
 {
     uint8_t joint_finished[ARM_JOINTS_NUM] = {0};
     uint8_t finished_count = 0;
+    uint32_t stop_generation = g_arm_robot_stop_generation;
 
     if ((timeout_ms < 0) || (timeout_ms > ARM_MAX_WAIT_TIME)) {
         timeout_ms = ARM_MAX_WAIT_TIME;
@@ -497,6 +505,11 @@ bool arm_wait_sync_finished(int timeout_ms)
     uint32_t start_time = osKernelGetTickCount();
     int err_count = 0;
     while (osKernelGetTickCount() - start_time < timeout_ms) { 
+        if (stop_generation != g_arm_robot_stop_generation) {
+            arm_robot_set_sync(ARM_ALL_JOINTS_SYNC_MASK, false);
+            return false;
+        }
+
         for (int i = 0; i < ARM_JOINTS_NUM; i++) {
             if (finished_count >= ARM_JOINTS_NUM) {
                 return true;

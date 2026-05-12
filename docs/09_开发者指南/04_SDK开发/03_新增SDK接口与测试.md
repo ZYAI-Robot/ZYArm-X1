@@ -58,7 +58,7 @@ software/zyarm_sdk/contracts/protocol_cases.yaml
 - `software/zyarm_sdk/README.md`
 - `software/zyarm_sdk/docs/`
 - [仿真与框架接入](../../06_仿真与框架接入/README.md)
-- [示例工具与诊断开发](../08_示例工具与诊断开发.md)
+- [示例工具与诊断开发](../07_示例工具与诊断开发.md)
 - 依赖 SDK 的 LeRobot、tools、diagnostics
 
 ## 待项目方补充

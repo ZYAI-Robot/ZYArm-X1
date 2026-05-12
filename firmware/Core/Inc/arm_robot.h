@@ -153,6 +153,7 @@ int arm_joint_angle_update(bool claw_update);
 int arm_set_joint_stop(int joint_id, enum ArmJointStopMode mode, int param);
 int arm_set_all_joint_stop(enum ArmJointStopMode mode, int param);
 int arm_set_zero(void);
+void arm_robot_request_stop(void);
 
 /**
      * 设置机械臂关节同步标志

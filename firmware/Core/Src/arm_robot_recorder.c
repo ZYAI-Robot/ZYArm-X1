@@ -147,12 +147,12 @@ EXIT:
     vTaskDelete(NULL);
 }
 
-void arm_record_manger_list(void)
+void arm_record_manger_list(uint32_t cmd_id)
 { 
     int index = 0;
     ArmRecordHead head = {0};
     int count = 0;
-    safe_printf("arm record list:\n");
+    send_string_response(cmd_id, "arm record list:\n");
     for (index = 0; index < ARM_RECORD_MAX_NUMS; index++) {
         HAL_StatusTypeDef ret = W25Q128_Read(index * ARM_RECORD_MANAGER_FLASH_SIZE, (uint8_t *)&head, sizeof(ArmRecordHead), 1000);
         if (ret != HAL_OK) {
@@ -161,13 +161,13 @@ void arm_record_manger_list(void)
         }
 
         if ((head.state == ARM_RECORD_STATUS_VALID) && (head.info_num > 0) && (strlen(head.name) > 0)) {
-            safe_printf("index: %d, name: %s, duration: %.2fs\n", index, head.name, ((float)head.info_num) * ARM_RECORD_INTERVAL_DEFAULT / 1000);
+            send_string_response(cmd_id, "index: %d, name: %s, duration: %.2fs\n", index, head.name, ((float)head.info_num) * ARM_RECORD_INTERVAL_DEFAULT / 1000);
             count++;
         }
     }
 
     if (count == 0) {
-        safe_printf("No action recording information.\n");
+        send_string_response(cmd_id, "No action recording information.\n");
     }
 }
 

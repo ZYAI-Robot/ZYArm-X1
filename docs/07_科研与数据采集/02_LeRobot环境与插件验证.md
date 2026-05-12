@@ -17,7 +17,7 @@ LeRobot 命令
 pip install lerobot==0.5.1
 ```
 
-后续升级 LeRobot 时，需要验证 Robot/Teleoperator API、camera 配置、record/replay 命令和 dataset 写入行为。版本升级属于插件维护工作，见 [LeRobot 开发](../09_开发者指南/07_LeRobot开发/README.md)。
+后续升级 LeRobot 时，需要验证 Robot/Teleoperator API、camera 配置、record/replay 命令和 dataset 写入行为。版本升级属于插件维护工作，见 [LeRobot 开发](../09_开发者指南/06_LeRobot开发/README.md)。
 
 ## 安装
 

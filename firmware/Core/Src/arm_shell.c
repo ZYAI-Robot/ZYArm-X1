@@ -10,6 +10,7 @@
 
 #define ARM_SHELL_RAW_CMD_QUEUE_LENGTH 5
 #define ARM_SHELL_CMD_QUEUE_LENGTH 15
+#define ARM_SHELL_RX_STALE_TIMEOUT_MS 1000U
 #define ARM_SHELL_LOG_TAG "SHELL"
 
 ArmShell g_arm_shell = {0};
@@ -154,6 +155,29 @@ static void arm_shell_note_overflow(void)
     g_arm_shell_parser_stats.overflow_count++;
 }
 
+static void arm_shell_queue_rx_frame_from_isr(
+    uint8_t *rx_buffer,
+    uint16_t rx_len,
+    BaseType_t *task_woken)
+{
+    if ((rx_buffer == NULL) || (rx_len == 0U)) {
+        return;
+    }
+
+    rx_buffer[rx_len] = '\0';
+
+    if (g_arm_shell.raw_cmd_queue == NULL) {
+        return;
+    }
+
+    if (xQueueSendFromISR(g_arm_shell.raw_cmd_queue, rx_buffer, task_woken) == pdTRUE) {
+        arm_shell_transport_note_rx_frame_ok();
+    } else {
+        arm_shell_note_overflow();
+        arm_shell_transport_note_rx_overflow();
+    }
+}
+
 /**
  * 命令解析任务
  * @param argument 任务参数
@@ -164,7 +188,9 @@ static void arm_shell_analyser(void *argument)
 
     safe_printf("arm_shell_analyser task start.\n");
     while (xQueueReceive(g_arm_shell.raw_cmd_queue, g_loacl_raw_cmd_buf, portMAX_DELAY) == pdTRUE) {
-        if (strcmp((char *)g_loacl_raw_cmd_buf, "help\n") == 0) {
+        if ((strcmp((char *)g_loacl_raw_cmd_buf, "help") == 0) ||
+            (strcmp((char *)g_loacl_raw_cmd_buf, "help\n") == 0) ||
+            (strcmp((char *)g_loacl_raw_cmd_buf, "help\r") == 0)) {
             shell_show_help();
             continue;
         }
@@ -175,7 +201,7 @@ static void arm_shell_analyser(void *argument)
             arm_shell_note_parse_error();
             ARM_LOGW_TAG(
                 ARM_SHELL_LOG_TAG,
-                "Parse command failed for raw input: %s",
+                "Parse command failed for raw input: %s\n",
                 g_loacl_raw_cmd_buf
             );
             continue;
@@ -184,7 +210,9 @@ static void arm_shell_analyser(void *argument)
         arm_shell_note_parse_success();
 
         if (command.cmd_id == CMD_ID_STOP) {
+            send_ack_received(command.cmd_id);
             shell_handle_stop();
+            send_ack_completed(command.cmd_id, 0);
             continue;
         }
 
@@ -206,6 +234,7 @@ static void execute_command(ArmShellCmdPackage *command)
     ShellFunc func = g_shell_cmd_list[command->cmd_id].func;
     if (func == NULL) {
         ARM_LOGE_TAG(ARM_SHELL_LOG_TAG, "No handler for command ID: %d\n", command->cmd_id);
+        send_ack_completed(command->cmd_id, -1);
         return;
     }
 
@@ -240,6 +269,7 @@ void arm_shell_irq_handler(void)
     BaseType_t xHigherPriorityTaskWoken = pdFALSE;
     static uint16_t rx_index = 0U;
     static uint8_t rx_overflowed = 0U;
+    static uint32_t last_rx_tick = 0U;
     uint8_t *rx_buffer = g_arm_shell.cmd_buffer;
     uint32_t sr = huart1.Instance->SR;
 
@@ -262,16 +292,37 @@ void arm_shell_irq_handler(void)
 
     while (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_RXNE)) {
         uint8_t data = (uint8_t)(huart1.Instance->DR & 0x00FFU);
+        uint32_t now = HAL_GetTick();
 
         if (rx_overflowed != 0U) {
+            if ((data == '\n') || (data == '\r')) {
+                rx_index = 0U;
+                rx_overflowed = 0U;
+                last_rx_tick = 0U;
+            }
+            continue;
+        }
+
+        if ((rx_index > 0U) && (last_rx_tick != 0U) &&
+            ((now - last_rx_tick) > ARM_SHELL_RX_STALE_TIMEOUT_MS)) {
+            rx_index = 0U;
+            last_rx_tick = 0U;
+        }
+
+        if ((data == '\n') || (data == '\r')) {
+            arm_shell_queue_rx_frame_from_isr(rx_buffer, rx_index, &xHigherPriorityTaskWoken);
+            rx_index = 0U;
+            last_rx_tick = 0U;
             continue;
         }
 
         if (rx_index < (ARM_SHELL_CMD_MAX_LEN - 1U)) {
             rx_buffer[rx_index] = data;
             rx_index++;
+            last_rx_tick = now;
         } else {
             rx_overflowed = 1U;
+            last_rx_tick = now;
             arm_shell_note_overflow();
             arm_shell_transport_note_rx_overflow();
         }
@@ -279,24 +330,9 @@ void arm_shell_irq_handler(void)
 
     if (__HAL_UART_GET_FLAG(&huart1, UART_FLAG_IDLE)) {
         __HAL_UART_CLEAR_IDLEFLAG(&huart1);
-
-        if ((rx_overflowed == 0U) && (rx_index > 0U)) {
-            if ((g_arm_shell.raw_cmd_queue != NULL) &&
-                ((rx_buffer[rx_index - 1U] == '\n') || (rx_buffer[rx_index - 1U] == '\r'))) {
-                rx_buffer[rx_index] = '\0';
-                if (xQueueSendFromISR(g_arm_shell.raw_cmd_queue, rx_buffer, &xHigherPriorityTaskWoken) == pdTRUE) {
-                    arm_shell_transport_note_rx_frame_ok();
-                } else {
-                    arm_shell_note_overflow();
-                    arm_shell_transport_note_rx_overflow();
-                }
-            }
-        }
-
-        rx_index = 0U;
-        rx_overflowed = 0U;
-        portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
     }
+
+    portYIELD_FROM_ISR(xHigherPriorityTaskWoken);
 }
 
 int arm_shell_init(void)
