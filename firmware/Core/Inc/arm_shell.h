@@ -52,6 +52,7 @@ typedef enum {
     CMD_ID_GET_TRANSPORT_STATS,
     CMD_ID_JOINT_IO_FAST,
     CMD_ID_IK_SOLVE,
+    CMD_ID_STANDBY,
     CMD_ID_MAX_NUM,
 } CMD_ID;
 

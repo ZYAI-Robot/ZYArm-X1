@@ -37,6 +37,22 @@ pip install -e software/lerobot_robot_zyarm
 python -c "import lerobot_robot_zyarm; print('zyarm LeRobot plugin ok')"
 ```
 
+## 源码结构
+
+`src/lerobot_robot_zyarm/` 下的文件职责如下：
+
+| 文件 | 作用 |
+| --- | --- |
+| `__init__.py` | 对外导出 ZYArm follower、leader 和配置类，使 LeRobot 插件注册后可以通过 `--robot.type=zyarm_follower`、`--teleop.type=zyarm_leader` 使用。 |
+| `config.py` | 定义 LeRobot 配置类，包括 follower 串口、相机、状态新鲜度、slave filter、leader 频率、启动超时和重定向参数。 |
+| `features.py` | 定义 LeRobot dataset/action/observation 使用的稳定特征名和 shape，例如 7 个 `joint*.pos` 以及相机 observation。 |
+| `conversion.py` | 在 LeRobot action/observation dict 和 SDK 内部关节位置数组之间做转换。 |
+| `robot.py` | 实现 `ZyArmFollowerRobot`，负责 follower 连接、相机连接、状态读取、进入 slave filter、`get_observation()` 和 `send_action()`。 |
+| `teleoperator.py` | 实现 `ZyArmLeaderTeleoperator`，负责 leader 连接、启动首帧等待、episode 起点刷新、`get_action()` 和 leader 到 follower 的动作重定向。 |
+| `recording.py` | 实现 `zyarm-record` 使用的录制编排，复用 LeRobot dataset/camera/policy/encoder，但由本包控制 pre-roll、active recording loop、reset follow 和 episode 保存顺序。 |
+| `cli.py` | `zyarm-record` 控制台入口，负责设置 Windows 控制台编码并调用 `recording.main()`。 |
+| `profile.py` | 默认关闭的实机数据质量 profiler，用代码内开关采样 20ms/50Hz 热路径耗时、新鲜度、主从帧率和相机读取耗时。 |
+
 ## 硬件连接
 
 典型连接方式：
@@ -82,7 +98,7 @@ lerobot-teleoperate \
 lerobot-teleoperate \
   --robot.type=zyarm_follower \
   --robot.port=/dev/ttyUSB1 \
-  --robot.cameras="{front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, wrist: {type: opencv, index_or_path: 1, width: 640, height: 480, fps: 30}}" \
+  --robot.cameras="{front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 50}, wrist: {type: opencv, index_or_path: 1, width: 640, height: 480, fps: 50}}" \
   --teleop.type=zyarm_leader \
   --teleop.port=/dev/ttyUSB0 \
   --display_data=true
@@ -90,25 +106,33 @@ lerobot-teleoperate \
 
 ## 数据采集
 
-采集时由 LeRobot 负责 dataset、视频编码、Rerun 可视化和 episode 管理，zyarm 插件只提供 robot/teleoperator 适配：
+产品采集推荐使用 `zyarm-record`，不要直接运行 LeRobot 原生 `lerobot-record`。`zyarm-record` 不是重新实现数据采集系统；它仍然复用 LeRobot 的 dataset、相机、策略、processor、视频编码和保存能力，只是把 ZYArm 必须定制的 pre-roll、active recording loop、reset follow 和 profiling 编排放在本包内，避免修改 LeRobot 源码。
 
 ```bash
-lerobot-record \
+zyarm-record \
   --robot.type=zyarm_follower \
   --robot.port=/dev/ttyUSB1 \
-  --robot.cameras="{front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, wrist: {type: opencv, index_or_path: 1, width: 640, height: 480, fps: 30}}" \
+  --robot.cameras="{front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 50}, wrist: {type: opencv, index_or_path: 1, width: 640, height: 480, fps: 50}}" \
   --teleop.type=zyarm_leader \
   --teleop.port=/dev/ttyUSB0 \
   --dataset.repo_id=<user>/zyarm_demo \
   --dataset.num_episodes=5 \
   --dataset.episode_time_s=60 \
+  --dataset.fps=50 \
   --dataset.single_task="Pick up the object" \
+  --dataset.vcodec=h264 \
   --dataset.streaming_encoding=true \
   --dataset.encoder_threads=2 \
   --display_data=true
 ```
 
-如果画面或控制周期明显卡顿，优先降低相机分辨率、降低 fps、减少 `encoder_threads`，或关闭 `--display_data`。
+`zyarm-record` 的采集阶段按 `get_observation()` -> `get_action()` -> `send_action()` -> `dataset.add_frame()` 执行；episode 之间的 reset 阶段不写 dataset，但会继续执行 `teleop.get_action()` -> `robot.send_action()`，保持主从臂跟随控制在线。
+
+`zyarm-record` 默认 `--dataset.fps=50`，对应 20ms 采集周期，这是当前和 ZYArm 固件、主从臂链路及已验证数据质量匹配的产品默认值。示例中显式写出 `--dataset.fps=50` 是为了强调推荐采集频率；用户仍可按相机能力、任务需求或机器性能显式覆盖为其他 FPS。
+
+产品默认实时采集编码使用 `--dataset.vcodec=h264`，这是当前已经验证过的稳定路径。`--dataset.vcodec=auto` 仍然保留给用户显式选择：选择 `auto` 时会走 LeRobot/FFmpeg 原生逻辑自动搜索硬件编码；用户也可以显式指定 `h264_nvenc`、`h264_qsv`、`libsvtav1` 等编码器。如果明确使用 `--dataset.vcodec=libsvtav1`，建议搭配 `--dataset.streaming_encoding=false`，让 AV1 软件编码发生在 episode 结束后的 save 阶段，避免把重编码压力放进 50Hz 采集 loop。
+
+如果画面或控制周期明显卡顿，优先降低相机分辨率、降低 fps、减少 `encoder_threads`、关闭 `--display_data`，或关闭 streaming encoding。不要通过放宽 `--robot.state_max_age_ms`、`--teleop.action_max_age_ms` 或 `--teleop.wait_timeout_ms` 掩盖实时性问题。
 
 ## 回放
 
@@ -126,17 +150,19 @@ lerobot-replay \
 
 ## 策略评估
 
-LeRobot 使用 `lerobot-record` 运行策略评估。和人工采集相比，只需要把 teleop 换成 policy：
+策略评估同样推荐使用 `zyarm-record`。和人工采集相比，只需要把 teleop 换成 policy：
 
 ```bash
-lerobot-record \
+zyarm-record \
   --robot.type=zyarm_follower \
   --robot.port=/dev/ttyUSB1 \
   --robot.cameras="{front: {type: opencv, index_or_path: 0, width: 640, height: 480, fps: 30}, wrist: {type: opencv, index_or_path: 1, width: 640, height: 480, fps: 30}}" \
   --dataset.repo_id=<user>/zyarm_eval \
   --dataset.num_episodes=3 \
   --dataset.episode_time_s=60 \
+  --dataset.fps=50 \
   --dataset.single_task="Evaluate the trained policy" \
+  --dataset.vcodec=h264 \
   --policy.path=<user>/zyarm_policy \
   --display_data=true
 ```
@@ -155,6 +181,7 @@ LeRobot follower 连接后会固定进入固件 slave filter 模式，并在该�
 | `teleop.port` | `""` | leader 串口 |
 | `teleop.baudrate` | `230400` | leader 波特率 |
 | `teleop.leader_hz` | `50.0` | leader 动作读取频率 |
+| `teleop.startup_timeout_ms` | `1000.0` | leader 进入 master mode 后等待首帧 master-data 的启动超时 |
 
 ## 安全注意事项
 

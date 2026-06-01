@@ -14,6 +14,9 @@ dependencies = [
   "zyarm-sdk==0.1.0",
 ]
 
+[project.scripts]
+zyarm-record = "lerobot_robot_zyarm.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["src"]
 

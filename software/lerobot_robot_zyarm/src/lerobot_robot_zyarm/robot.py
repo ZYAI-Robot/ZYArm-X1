@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import time
 import warnings
+from dataclasses import dataclass
 from typing import Optional
 
 from lerobot.cameras.utils import make_cameras_from_configs
@@ -12,6 +14,23 @@ from zyarm_sdk.safety import SafetyController
 from .config import ZyArmFollowerRobotConfig
 from .conversion import action_to_positions, positions_to_action
 from .features import joint_features, observation_features
+from .profile import once_profiler
+
+
+@dataclass(frozen=True)
+class FollowerStateDiagnostic:
+    positions: tuple[float, ...]
+    age_ms: float
+    source: object
+    sequence: object
+
+
+@dataclass(frozen=True)
+class FollowerStateDiagnostic:
+    positions: tuple[float, ...]
+    age_ms: float
+    source: object
+    sequence: object
 
 
 class ZyArmFollowerRobot(Robot):
@@ -31,6 +50,9 @@ class ZyArmFollowerRobot(Robot):
         self.safety = SafetyController(config.safety)
         self.cameras = cameras if cameras is not None else make_cameras_from_configs(config.cameras)
         self._slave_filter_started = False
+        self._last_observation_monotonic: float | None = None
+        self.last_observation_state_timestamp: float | None = None
+        self.last_observation_state_age_ms: float | None = None
 
     @property
     def observation_features(self) -> dict:
@@ -48,17 +70,19 @@ class ZyArmFollowerRobot(Robot):
 
     def connect(self, calibrate: bool = True) -> None:
         del calibrate
-        if not getattr(self.arm, "is_connected", False):
-            self.arm.connect()
-        state = self.arm.query_state(timeout_ms=self.config.initial_state_timeout_ms)
-        if state is None:
-            raise RuntimeError("Failed to read initial zyarm follower state")
-        if not self._slave_filter_started:
-            self._start_slave_filter()
         try:
             for camera in self.cameras.values():
                 if not getattr(camera, "is_connected", False):
                     camera.connect()
+
+            if not getattr(self.arm, "is_connected", False):
+                self.arm.connect()
+            state = self.arm.query_state(timeout_ms=self.config.initial_state_timeout_ms)
+            if state is None:
+                raise RuntimeError("Failed to read initial zyarm follower state after camera startup")
+            if not self._slave_filter_started:
+                self._start_slave_filter()
+            self._last_observation_monotonic = None
             self.configure()
         except Exception:
             self.disconnect()
@@ -75,27 +99,59 @@ class ZyArmFollowerRobot(Robot):
         return None
 
     def get_observation(self) -> RobotObservation:
-        state = self.arm.get_latest_state(self.config.state_max_age_ms)
+        profile_token = once_profiler.begin("get_observation")
+        profile_sampled = bool(profile_token and profile_token[2])
+        state = self._get_observation_state()
         if state is None and self.config.query_state_on_missing_cache:
             state = self.arm.query_state(timeout_ms=self.config.initial_state_timeout_ms)
         if state is None:
             raise RuntimeError("No zyarm follower state available")
+        self._last_observation_monotonic = time.perf_counter()
+        self.last_observation_state_timestamp = getattr(state, "timestamp", None)
+        self.last_observation_state_age_ms = getattr(state, "age_ms", None)
 
         observation: RobotObservation = positions_to_action(state.positions)
         for name, camera in self.cameras.items():
-            observation[name] = camera.read_latest()
+            if profile_sampled:
+                camera_start = time.perf_counter()
+                observation[name] = camera.read_latest()
+                once_profiler.add_camera_value(name, (time.perf_counter() - camera_start) * 1000.0)
+            else:
+                observation[name] = camera.read_latest()
+        sampled = once_profiler.end(profile_token)
+        if sampled:
+            once_profiler.add_value("state_age_ms", getattr(state, "age_ms", None))
+            once_profiler.update_frame_stats(self.arm)
+            once_profiler.maybe_print()
         return observation
 
     def send_action(self, action: RobotAction) -> RobotAction:
+        profile_token = once_profiler.begin("send_action")
         positions = action_to_positions(action)
         safe_positions = self.safety.sanitize_positions(positions)
         self.arm.fast_io(safe_positions)
+        if once_profiler.end(profile_token):
+            once_profiler.maybe_print()
         return positions_to_action(safe_positions)
+
+    def refresh_state_for_diagnostics(self) -> FollowerStateDiagnostic:
+        state = self.arm.query_state(timeout_ms=self.config.initial_state_timeout_ms)
+        if state is None:
+            raise RuntimeError("No zyarm follower state available for B_ENTER_DIAGNOSTIC")
+        return FollowerStateDiagnostic(
+            positions=tuple(state.positions),
+            age_ms=float(getattr(state, "age_ms", 0.0)),
+            source=getattr(state, "source", None),
+            sequence=getattr(state, "sequence", None),
+        )
 
     def disconnect(self) -> None:
         for camera in self.cameras.values():
             if getattr(camera, "is_connected", False):
                 camera.disconnect()
+        self._last_observation_monotonic = None
+        self.last_observation_state_timestamp = None
+        self.last_observation_state_age_ms = None
         self._stop_slave_filter()
         if getattr(self.arm, "is_connected", False):
             self.arm.close()
@@ -123,6 +179,19 @@ class ZyArmFollowerRobot(Robot):
             )
         finally:
             self._slave_filter_started = False
+
+    def _get_observation_state(self):
+        if self._observation_needs_refresh_after_idle():
+            return self.arm.query_state(timeout_ms=self.config.initial_state_timeout_ms)
+        return self.arm.get_latest_state(self.config.state_max_age_ms)
+
+    def _observation_needs_refresh_after_idle(self) -> bool:
+        if self._last_observation_monotonic is None:
+            return True
+        if self.config.state_max_age_ms is None:
+            return False
+        idle_s = time.perf_counter() - self._last_observation_monotonic
+        return idle_s > (self.config.state_max_age_ms / 1000.0)
 
     @staticmethod
     def _make_sdk_config(config: ZyArmFollowerRobotConfig) -> ZyArmConfig:

@@ -8,6 +8,7 @@
 #include "arm_master_slave.h"
 #include "arm_status_report.h"
 #include "fs_usart.h"
+#include <stdio.h>
 
 #define ARM_SHELL_CMD_LOG_TAG "SHELL_CMD"
 
@@ -20,6 +21,9 @@ static const char* HW_VERSION = "FS_V2.0 ToB";
 
 static const char* SW_VERSION = GIT_COMMIT_ID;
 static const char* BUILD_DATE = __DATE__ " " __TIME__;
+static const float g_low_power_standby_target[ARM_JOINTS_NUM] = {
+    0.0f, -105.0f, 90.0f, 0.0f, 0.0f, 0.0f, 0.0f
+};
 
 static void arm_parse_joint_targets(
     const ArmShellCmdPackage *cmd,
@@ -169,6 +173,56 @@ static void handle_reset(const ArmShellCmdPackage *cmd)
     send_ack_completed(cmd->cmd_id, 0);
 }
 
+static void handle_standby(const ArmShellCmdPackage *cmd)
+{
+    float target_angles[ARM_JOINTS_NUM];
+    float interval_ms;
+    int ret;
+
+    memcpy(target_angles, g_low_power_standby_target, sizeof(target_angles));
+    send_ack_received(cmd->cmd_id);
+
+    ret = arm_joint_angle_update(true);
+    if (ret != 0) {
+        ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "Update joint angles failed\n");
+        send_ack_completed(cmd->cmd_id, ret);
+        return;
+    }
+
+    ret = arm_cal_interval_with_angle_diff(target_angles, &interval_ms);
+    if (ret != 0) {
+        send_ack_completed(cmd->cmd_id, ret);
+        return;
+    }
+
+    for (int i = 0; i < ARM_JOINTS_NUM; i++) {
+        if (!arm_joint_check_angle_valid(i, target_angles[i])) {
+            send_ack_completed(cmd->cmd_id, -1);
+            return;
+        }
+
+        ret = arm_set_joint_angle_interval_acc(
+            i,
+            target_angles[i],
+            (int)roundf(interval_ms),
+            ARM_DEFAULT_ACCEL_TIME,
+            ARM_DEFAULT_ACCEL_TIME
+        );
+        if (ret != 0) {
+            send_ack_completed(cmd->cmd_id, ret);
+            return;
+        }
+    }
+
+    arm_robot_set_sync(ARM_ALL_JOINTS_SYNC_MASK, true);
+    if (!arm_wait_sync_finished(-1)) {
+        send_ack_completed(cmd->cmd_id, -1);
+        return;
+    }
+
+    send_ack_completed(cmd->cmd_id, 0);
+}
+
 static void handle_joint_sync(const ArmShellCmdPackage *cmd)
 {
     if (cmd->param_count < 7) {
@@ -310,10 +364,95 @@ static void handle_set_joint(const ArmShellCmdPackage *cmd)
     send_ack_completed(cmd->cmd_id, 0);
 }
 
+static int handle_status_read_servo_monitor(ServoData servo_data[ARM_SERVO_NUM])
+{
+    ArmServoOpt *servo_ops = g_arm_robot.servo_ops;
+    uint8_t servo_ids[ARM_SERVO_NUM] = {0};
+
+    if ((servo_ops == NULL) || (servo_data == NULL)) {
+        return -1;
+    }
+
+    for (uint32_t i = 0U; i < ARM_SERVO_NUM; ++i) {
+        servo_ids[i] = (uint8_t)(i + 1U);
+    }
+
+    if (servo_ops->monitor_batch != NULL) {
+        return servo_ops->monitor_batch(servo_ids, ARM_SERVO_NUM, servo_data);
+    }
+
+    if (servo_ops->monitor == NULL) {
+        return -1;
+    }
+
+    for (uint32_t i = 0U; i < ARM_SERVO_NUM; ++i) {
+        int ret = servo_ops->monitor((int)servo_ids[i], &servo_data[i]);
+        if (ret != 0) {
+            return ret;
+        }
+    }
+
+    return 0;
+}
+
+static void handle_status_print_servo_monitor(const ServoData servo_data[ARM_SERVO_NUM])
+{
+    safe_printf(
+        "[SERVO_STATUS] id    angle cir  cur   pwr temp    mV stat\n"
+    );
+
+    for (uint32_t i = 0U; i < ARM_SERVO_NUM; ++i) {
+        uint8_t servo_id = (servo_data[i].id != 0U) ? servo_data[i].id : (uint8_t)(i + 1U);
+
+        safe_printf(
+            "[SERVO_STATUS] %2u %8.2f %3d %4d %5d %4d %5d 0x%02X\n",
+            (unsigned int)servo_id,
+            servo_data[i].angle,
+            (int)servo_data[i].circle_count,
+            (int)servo_data[i].current,
+            (int)servo_data[i].power,
+            (int)servo_data[i].temperature,
+            (int)servo_data[i].voltage,
+            (unsigned int)servo_data[i].status
+        );
+    }
+}
+
+static int handle_status_send_servo_temp(uint32_t cmd_id, const ServoData servo_data[ARM_SERVO_NUM])
+{
+    char line[160];
+    int offset = snprintf(line, sizeof(line), "[SERVO_TEMP]");
+
+    if ((offset < 0) || (offset >= (int)sizeof(line))) {
+        return -1;
+    }
+
+    for (uint32_t i = 0U; i < ARM_SERVO_NUM; ++i) {
+        uint8_t servo_id = (servo_data[i].id != 0U) ? servo_data[i].id : (uint8_t)(i + 1U);
+        int written = snprintf(
+            &line[offset],
+            sizeof(line) - (size_t)offset,
+            " S%u:%d",
+            (unsigned int)servo_id,
+            (int)servo_data[i].temperature
+        );
+
+        if ((written < 0) || (written >= (int)(sizeof(line) - (size_t)offset))) {
+            return -1;
+        }
+        offset += written;
+    }
+
+    send_string_response(cmd_id, "%s\n", line);
+    return 0;
+}
+
 static void handle_status(const ArmShellCmdPackage *cmd)
 {
     float joint_snapshot[ARM_JOINTS_NUM] = {0};
+    ServoData servo_data[ARM_SERVO_NUM] = {0};
     int ret = 0;
+    int verbose = (cmd->param_count >= 1) ? (int)cmd->params[0] : 0;
     send_ack_received(cmd->cmd_id);
 
     ret = arm_joint_snapshot_read(true, joint_snapshot);
@@ -322,24 +461,31 @@ static void handle_status(const ArmShellCmdPackage *cmd)
         return;
     }
 
-    int verbose = (cmd->param_count >= 1) ? (int)cmd->params[0] : 0;
-
-    if (verbose != 0) {
-        for (int i = 1; i <= ARM_SERVO_NUM; i++) {
-            ret = g_arm_robot.servo_ops->get_status(i);
-            if (ret != 0) {
-                send_ack_completed(cmd->cmd_id, ret);
-                return;
-            }
-        }
-    }
-
     send_string_response(
         cmd->cmd_id,
         "[STATUS] J0:%.2f J1:%.2f J2:%.2f J3:%.2f J4:%.2f J5:%.2f CLAW:%.2f\n",
         joint_snapshot[0], joint_snapshot[1], joint_snapshot[2], joint_snapshot[3],
         joint_snapshot[4], joint_snapshot[5], joint_snapshot[6]
     );
+
+    if (verbose != 0) {
+        ret = handle_status_read_servo_monitor(servo_data);
+        if (ret != 0) {
+            send_ack_completed(cmd->cmd_id, ret);
+            return;
+        }
+
+        ret = handle_status_send_servo_temp(cmd->cmd_id, servo_data);
+        if (ret != 0) {
+            send_ack_completed(cmd->cmd_id, ret);
+            return;
+        }
+
+        if (verbose >= 2) {
+            handle_status_print_servo_monitor(servo_data);
+        }
+    }
+
     send_ack_completed(cmd->cmd_id, 0);
 }
 
@@ -907,7 +1053,7 @@ const ArmShellCmd g_shell_cmd_list[] = {
     [CMD_ID_JOINT_SYNC] = {"joint_sync", "Set all joints synchronously with 7 parameters: j0 j1 j2 j3 j4 j5 claw [sync verbose fast]", handle_joint_sync, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_GET_VERSION] = {"version", "Get firmware version information", handle_get_version, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_SET_JOINT] = {"set_joint", "Set specific joint angle with 2 parameters: joint_id angle [sync]", handle_set_joint, CMD_PARSE_FORMAT_FLOAT},
-    [CMD_ID_STATUS] = {"status", "Query current status of all joints [verbose]", handle_status, CMD_PARSE_FORMAT_FLOAT},
+    [CMD_ID_STATUS] = {"status", "Query current status of all joints [verbose=1 prints servo monitor]", handle_status, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_ZERO] = {"zero", "Set current position as zero point", handle_zero, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_SET_CLAW] = {"set_claw", "Set claw position with 1 parameter: position [sync]", handle_set_claw, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_GET_CLAW] = {"get_claw", "Get current claw position", handle_get_claw, CMD_PARSE_FORMAT_FLOAT},
@@ -938,6 +1084,7 @@ const ArmShellCmd g_shell_cmd_list[] = {
     [CMD_ID_GET_TRANSPORT_STATS] = {"get_transport_stats", "Get firmware UART1/UART6 communication health snapshot", handle_get_transport_stats, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_JOINT_IO_FAST] = {"joint_io_fast", "Batch read joint snapshot, fast sync move, and output [STATUS] with 7 parameters: j0 j1 j2 j3 j4 j5 claw", handle_joint_io_fast, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_IK_SOLVE] = {"ik_solve", "Calculate IK joint solution without moving with 6 parameters: x y z rx ry rz", handle_ik_solve, CMD_PARSE_FORMAT_FLOAT},
+    [CMD_ID_STANDBY] = {"standby", "Move to low-power standby pose [0 -105 90 0 0 0 0] and keep joints locked", handle_standby, CMD_PARSE_FORMAT_FLOAT},
 };
 
 void shell_show_help()

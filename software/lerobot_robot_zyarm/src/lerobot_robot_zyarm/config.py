@@ -22,10 +22,11 @@ class ZyArmFollowerRobotConfig(RobotConfig):
     play_record_timeout_s: float = 190.0
     reset_rts_dtr: bool = False
     reset_quiet_s: float = 0.0
-    state_max_age_ms: Optional[float] = 100.0
+    state_max_age_ms: Optional[float] = 40.0
     initial_state_timeout_ms: float = 1000.0
     query_state_on_missing_cache: bool = True
     slave_filter_lpf_alpha: float = 0.15
+    follower_hz: float = 50.0
     cameras: Dict[str, CameraConfig] = field(default_factory=dict)
     mapping: MappingConfig = field(default_factory=MappingConfig)
     safety: SafetyConfig = field(default_factory=SafetyConfig)
@@ -49,8 +50,9 @@ class ZyArmLeaderTeleoperatorConfig(TeleoperatorConfig):
     reset_rts_dtr: bool = False
     reset_quiet_s: float = 0.0
     leader_hz: float = 50.0
-    action_max_age_ms: float = 100.0
+    action_max_age_ms: float = 40.0
     wait_timeout_ms: float = 50.0
+    startup_timeout_ms: float = 1000.0
     mapping: MappingConfig = field(default_factory=MappingConfig)
     retarget: RetargetConfig = field(default_factory=RetargetConfig)
 

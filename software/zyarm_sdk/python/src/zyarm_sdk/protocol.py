@@ -36,6 +36,7 @@ class CommandId(IntEnum):
     MASTER_SLAVE_STOP = 33
     MASTER_SLAVE_SET_LPF = 34
     JOINT_IO_FAST = 36
+    LOW_POWER_STANDBY = 38
 
 
 class MasterSlaveRole(IntEnum):

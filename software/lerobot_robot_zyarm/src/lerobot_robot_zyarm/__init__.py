@@ -4,6 +4,7 @@ from .config import (
     ZyArmLeaderTeleoperatorConfig,
     ZyArmLeaderConfig,
 )
+from .record_lifecycle import FreshnessDiagnostic, ZyArmRecordLifecycle, ZyArmRecordStop
 from .robot import ZyArmFollowerRobot
 from .teleoperator import ZyArmLeaderTeleoperator
 
@@ -14,4 +15,7 @@ __all__ = [
     "ZyArmLeaderConfig",
     "ZyArmLeaderTeleoperator",
     "ZyArmLeaderTeleoperatorConfig",
+    "FreshnessDiagnostic",
+    "ZyArmRecordLifecycle",
+    "ZyArmRecordStop",
 ]

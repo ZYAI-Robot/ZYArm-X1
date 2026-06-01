@@ -10,3 +10,4 @@ def test_config_types_are_registered() -> None:
     assert follower.slave_filter_lpf_alpha == 0.15
     assert leader.type == "zyarm_leader"
     assert leader.baudrate == 230_400
+    assert leader.startup_timeout_ms == 1000.0

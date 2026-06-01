@@ -14,6 +14,9 @@
 
 依赖：
 - pyserial（pip install pyserial）
+
+示例用法：
+- python arm_serial_controller.py --port COM3 --baudrate 230400 --device right --send-hz 30 --no-status-line
 """
 
 from __future__ import annotations

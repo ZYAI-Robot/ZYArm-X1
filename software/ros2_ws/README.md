@@ -142,6 +142,16 @@ ros2 launch zyarm_moveit_config demo_x1_standard_real.launch.py serial_port:=/de
 
 `zyarm_hardware_interface` 在 `ros2_control_node` 进程内直接持有串口并发送 CMD36。MoveIt 真机路径不启动 `zyarm_hardware`。
 
+启动 RViz 数据集轨迹回放质检（Raw Replay）：
+
+```bash
+ros2 launch zyarm_dataset_replay rviz_replay_quality_check.launch.py \
+  dataset_root:=/abs/path/to/dataset \
+  episode_index:=0
+```
+
+该入口从 LeRobot 格式数据集读取 episode，通过 `ros2_control` 控制链在 RViz 中回放轨迹。依赖 `pandas` 和 `pyarrow`，需提前在当前虚拟环境中安装。详细参数和故障排查见 `src/zyarm_dataset_replay/README.md`。
+
 ## 目录说明
 
 - `src/`

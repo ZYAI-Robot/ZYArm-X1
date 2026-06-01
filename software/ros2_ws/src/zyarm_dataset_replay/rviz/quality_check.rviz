@@ -1,0 +1,50 @@
+Panels:
+  - Class: rviz_common/Displays
+    Name: Displays
+Visualization Manager:
+  Class: ""
+  Displays:
+    - Class: rviz_default_plugins/Grid
+      Enabled: true
+      Name: Grid
+      Plane: XY
+      Cell Size: 1
+      Color: 160; 160; 164
+    - Class: rviz_default_plugins/RobotModel
+      Enabled: true
+      Name: RobotModel
+      Description Topic:
+        Value: /robot_description
+      TF Prefix: ""
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Name: FrontImage
+      Topic:
+        Value: /replay/front/image_raw
+      Normalize Range: true
+    - Class: rviz_default_plugins/Image
+      Enabled: true
+      Name: WristImage
+      Topic:
+        Value: /replay/wrist/image_raw
+      Normalize Range: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: FrameMarker
+      Marker Topic:
+        Value: /replay/frame_marker
+  Enabled: true
+  Global Options:
+    Background Color: 48; 48; 48
+    Fixed Frame: base_link
+  Name: root
+  Tools:
+    - Class: rviz_default_plugins/Interact
+    - Class: rviz_default_plugins/MoveCamera
+    - Class: rviz_default_plugins/Select
+  Value: true
+Window Geometry:
+  Height: 1000
+  Width: 1600
+  X: 80
+  Y: 60

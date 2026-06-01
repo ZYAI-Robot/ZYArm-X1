@@ -11,7 +11,6 @@ from launch_ros.parameter_descriptions import ParameterValue
 
 
 def generate_launch_description():
-    # 从各包 share 目录中取模型和控制器配置，避免写死绝对路径。
     description_share = Path(get_package_share_directory("zyarm_description"))
     control_share = Path(get_package_share_directory("zyarm_control"))
 
@@ -25,7 +24,6 @@ def generate_launch_description():
         description="Start RViz2 when true.",
     )
 
-    # 运行时调用 xacro 生成 robot_description，并显式打开 ros2_control 插件。
     robot_description = ParameterValue(
         Command(
             [
@@ -103,8 +101,6 @@ def generate_launch_description():
         condition=IfCondition(LaunchConfiguration("use_rviz")),
     )
 
-    # 先起 joint_state_broadcaster，再拉起 arm/gripper 控制器，
-    # 这样控制器依赖的状态接口已经就绪，启动顺序更稳定。
     delay_arm_controller_until_jsb = RegisterEventHandler(
         OnProcessExit(
             target_action=joint_state_broadcaster_spawner,

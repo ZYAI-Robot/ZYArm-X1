@@ -38,6 +38,9 @@ class ZyArm:
     def reset(self, *, timeout_ms: Optional[float] = None) -> CommandResult:
         return self._send_action_command(CommandId.RESET, timeout_ms=timeout_ms)
 
+    def standby(self, *, timeout_ms: Optional[float] = None) -> CommandResult:
+        return self._send_action_command(CommandId.LOW_POWER_STANDBY, timeout_ms=timeout_ms)
+
     def stop(self, *, timeout_ms: Optional[float] = None) -> CommandResult:
         return self._send_ack_command(CommandId.STOP, timeout_ms=timeout_ms)
 

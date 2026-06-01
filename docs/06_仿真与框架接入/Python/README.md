@@ -2,7 +2,7 @@
 
 本页说明如何通过 Python SDK 快速控制机械臂。Python 路线适合教学脚本、诊断工具、轻量二次开发、主从遥操脚本和 LeRobot 相关实验。
 
-Python SDK 是对底层 Serial API 的封装。你不需要手工拼 `[CMD]` 文本，而是用 Python 对象调用 `query_state()`、`reset()`、`move_ik()`、`fast_io()` 等接口。
+Python SDK 是对底层 Serial API 的封装。你不需要手工拼 `[CMD]` 文本，而是用 Python 对象调用 `query_state()`、`reset()`、`standby()`、`move_ik()`、`fast_io()` 等接口。
 
 如果你要修改 SDK 类、扩展 API 或补测试，请阅读 [SDK 开发](../../09_开发者指南/04_SDK开发/README.md)。本页只保留使用入口和最小示例。
 
@@ -60,7 +60,7 @@ with ZyArm(ZyArmConfig(port="/dev/ttyUSB0")) as arm:
 python3 software/zyarm_sdk/python/examples/my_read_state.py
 ```
 
-第一次新增脚本建议只做 `query_state()` 状态读取。`reset()`、`move_ik()`、`fast_io()` 都可能驱动真实机械臂，运行前必须确认机械臂周围没有障碍物，并且可以随时断电。
+第一次新增脚本建议只做 `query_state()` 状态读取。`reset()`、`standby()`、`move_ik()`、`fast_io()` 都可能驱动真实机械臂，运行前必须确认机械臂周围没有障碍物，并且可以随时断电。
 
 ## 重新运行
 
@@ -112,11 +112,52 @@ from zyarm_sdk import ZyArm, ZyArmConfig
 with ZyArm(ZyArmConfig(port="/dev/ttyUSB0")) as arm:
     print(arm.reset())
     print(arm.move_ik(200, 0, 0, 0, 0, 0))
+    print(arm.standby())
     state = arm.query_state(timeout_ms=1000)
     print(state.positions if state else "No fresh state received")
 ```
 
-`reset()` 对应固件复位能力，`move_ik()` 对应运动学逆解动作。第一次运行时建议空载、低风险、小范围验证。
+`reset()` 对应固件复位能力，`move_ik()` 对应运动学逆解动作。`standby()` 对应固件 `CMD38`，会移动到低功耗待机姿态 `[0 -105 90 0 0 0 0]` 并保持锁定；它不是卸力或断电。第一次运行时建议空载、低风险、小范围验证。
+
+## 高频状态读写
+
+连续控制时不要在每一帧里调用 `query_state()`。`query_state()` 会发送 CMD6 并等待新的 `[STATUS]`，更适合启动确认、低频诊断和动作前后检查。
+
+高频循环推荐使用 `fast_io()` 和 `get_latest_state()` 组合：
+
+- `fast_io(target)` 负责快速下发 6 个关节和夹爪目标。
+- `get_latest_state(max_age_ms=...)` 只读取 SDK 后台接收线程维护的最新状态缓存，不额外发送串口命令。
+- 缓存状态可能比刚刚发送的 `fast_io()` 滞后一帧或数帧。它表示“最近测量到的状态”，不表示“本次目标已经执行完成”。
+
+示例：
+
+```python
+import time
+
+from zyarm_sdk import ZyArm, ZyArmConfig
+
+
+def compute_next_target(observation):
+    target = list(observation)
+    return target
+
+
+with ZyArm(ZyArmConfig(port="/dev/ttyUSB0")) as arm:
+    state = arm.query_state(timeout_ms=1000)
+    if state is None:
+        raise RuntimeError("No fresh state received")
+
+    target = list(state.positions)
+    while True:
+        latest = arm.get_latest_state(max_age_ms=100)
+        if latest is not None:
+            target = compute_next_target(latest.positions)
+
+        arm.fast_io(target)
+        time.sleep(0.01)
+```
+
+如果确实需要在某一次 CMD36 后等待状态对齐，可以显式调用 `fast_io(target, wait_state=True, timeout_ms=...)`。这个返回状态仍应理解为 CMD36 的测量快照，不是动作完成后的最终状态。
 
 ## 单位约定
 

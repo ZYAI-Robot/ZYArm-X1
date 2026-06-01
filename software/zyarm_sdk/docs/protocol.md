@@ -1,33 +1,49 @@
-# ZYArm firmware protocol notes
+# ZYArm 固件协议说明
 
-The SDK talks to the firmware through newline-delimited text commands:
+SDK 通过换行分隔的文本命令和固件通信。基础格式如下：
 
 ```text
 [CMD][<id>]
 [CMD][<id>][<space separated params>]
 ```
 
-Important command IDs:
+例如：
 
-- `CMD6 status`: active status query. The SDK sends `[CMD][6]` and waits for a fresh `[STATUS]` frame only when `query_state()` is called.
-- `CMD17 status_report`: periodic background status output. It is useful for diagnostics and low-rate streams, but callers should not mix it into high-frequency control loops without treating the source explicitly.
-- `CMD32 master-slave`: enters master mode. The leader arm then emits `[MD]` frames that can become teleoperation actions.
-- `CMD33 master-slave stop`: leaves master mode.
-- `CMD36 joint_io_fast`: fast I/O hot path. Firmware reads a joint snapshot first, then applies the target. The returned `[STATUS]` is a measured snapshot/pre-command state, not a guaranteed post-command completion state.
+```text
+[CMD][6]
+[CMD][36][0 -180 90 0 0 0 50]
+```
 
-Response lines:
+## 关键命令
 
-- `ACK_COMPLETED: CMD_ID=<id>, SUCCESS|ERROR` is an ACK for commands that choose to wait for ACK.
-- `[STATUS] J0:<v> J1:<v> J2:<v> J3:<v> J4:<v> J5:<v> CLAW:<v>` is a firmware-unit state frame.
-- `[MD][<frame_id>][<j0> <j1> <j2> <j3> <j4> <j5> <claw>]` is leader master-data output. Current firmware emits `frame_id` as a cyclic `0..9` marker, so SDK frame-gap diagnostics are weak observed events, not a complete count of firmware-side skipped or lost frames.
+- `CMD6 status`：主动状态查询。SDK 只有在调用 `query_state()` 时才发送 `[CMD][6]`，并等待新的 `[STATUS]`。
+- `CMD17 status_report`：周期状态上报。适合诊断和低频状态流，不建议和高频控制循环混用，除非调用方明确区分状态来源并接受时序差异。
+- `CMD32 master-slave`：进入主从模式。主臂会输出 `[MD]` 帧，SDK 可将其转换成遥操作动作。
+- `CMD33 master-slave stop`：退出主从模式。
+- `CMD36 joint_io_fast`：高频 I/O 热路径。固件会先读取关节快照，再应用目标值。返回的 `[STATUS]` 是测量快照/pre-command state，不保证是动作完成后的状态。
+- `CMD38 standby`：进入低功耗待机姿态 `[0 -105 90 0 0 0 0]`，到位后保持锁定。它不是卸力或外部断电。
 
-The no-change sentinel is `-999.9`. It is only used inside protocol/mapping layers when an `apply_mask` entry is false. Public SDK callers should pass radians for six arm joints and normalized `0.0..1.0` values for the gripper.
+## 返回行格式
 
-Angle expressions:
+- `ACK_COMPLETED: CMD_ID=<id>, SUCCESS|ERROR`：命令完成 ACK。SDK 只有在对应接口选择等待 ACK 时才会阻塞等待它。
+- `[STATUS] J0:<v> J1:<v> J2:<v> J3:<v> J4:<v> J5:<v> CLAW:<v>`：固件单位下的机械臂状态。
+- `[MD][<frame_id>][<j0> <j1> <j2> <j3> <j4> <j5> <claw>]`：主臂遥操作数据。当前固件的 `frame_id` 是 `0..9` 循环值，因此 SDK 的 frame-gap 统计只能作为弱观察事件，不是完整的固件侧丢帧计数。
 
-- Firmware expression: raw command and status values are the firmware's joint angles. These values include the hardware zero offsets and sign conventions used by the controller. For example, the physical initial pose is not necessarily all zeros in firmware `[STATUS]`.
-- SDK/ROS expression: public API values are normalized for application development. In the physical initial pose, all six arm joints are represented as `0` radians. The gripper is represented as `0.0..1.0`.
-- Conversion boundary: protocol parsing returns firmware values first; `mapping` converts them into SDK/ROS expression before constructing `ArmState` or `TeleopAction`. CMD36 formatting performs the inverse conversion before writing to serial.
-- Documentation and examples should name the expression explicitly when raw firmware values are shown.
+## 不改变占位值
 
-The transport owns serial RX in memory. ACK, STATUS and MD parsing must not depend on filesystem log files.
+`-999.9` 是 no-change sentinel，只在协议层和 `mapping` 层使用。当 `apply_mask` 中某个关节为 `False` 时，SDK 会把该关节转换成 `-999.9`，表示本次命令不改变这个关节。
+
+业务代码不要把 `-999.9` 当作普通目标角度。公开 SDK API 中，6 个机械臂关节应传入弧度，夹爪应传入 `0.0..1.0` 归一化值。
+
+## 角度表达边界
+
+- 固件表达：原始命令和状态中的数值，使用固件内部角度，包含硬件零偏和方向约定。机械臂物理初始姿态在固件 `[STATUS]` 中不一定全是 0。
+- SDK/ROS 表达：面向上层应用的数值。机械臂物理初始姿态下，6 个关节表示为 `0` 弧度，夹爪表示为 `0.0..1.0`。
+- 转换边界：协议解析先得到固件表达，`mapping` 再转换成 SDK/ROS 表达并构造 `ArmState` 或 `TeleopAction`。`CMD36` 下发时执行反向转换。
+- 文档和示例只要展示原始固件值，就应明确说明它是固件表达，避免和 SDK/ROS 表达混用。
+
+## 接收所有权
+
+一个串口连接应只有一个接收所有者。SDK 的 `transport` 负责在内存中解析 ACK、`[STATUS]` 和 `[MD]`，并维护缓存；解析逻辑不依赖文件日志。
+
+如果外部工具同时读取同一个串口，SDK 可能收不到完整返回行，进而出现 ACK 超时、状态陈旧或遥操作丢帧。

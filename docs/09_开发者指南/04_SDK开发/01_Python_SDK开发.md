@@ -21,7 +21,7 @@ Python SDK 依赖 `pyserial` 打开串口；包配置里要求 Python `>=3.9`。
 | 类或数据结构 | 位置 | 作用 |
 | --- | --- | --- |
 | `ZyArmConfig` | `config.py` | SDK 配置入口，至少需要填写 `port`，默认波特率为 `230400` |
-| `ZyArm` | `arm.py` | 最常用的机械臂控制类，封装复位、IK、夹爪、状态读取、`fast_io` 和主从模式 |
+| `ZyArm` | `arm.py` | 最常用的机械臂控制类，封装复位、待机、IK、夹爪、状态读取、`fast_io` 和主从模式 |
 | `ArmState` | `types.py` | 机械臂状态快照，包含 7 个位置值、来源、时间戳和原始回包 |
 | `CommandResult` | `types.py` | 命令发送结果，告诉你命令是否被 ACK、对应 CMD 编号和返回说明 |
 | `FastIoResult` | `types.py` | `fast_io()` 的返回结果，可选携带一次测量状态 |
@@ -67,12 +67,15 @@ with ZyArm(ZyArmConfig(port="COM3")) as arm:
     move_result = arm.move_ik(200, 0, 0, 0, 0, 0)
     print(move_result.accepted, move_result.message)
 
+    standby_result = arm.standby()
+    print(standby_result.accepted, standby_result.message)
+
     state = arm.query_state(timeout_ms=1000)
     if state:
         print(state.positions)
 ```
 
-`reset()` 对应固件 `CMD1`，`move_ik()` 对应固件 `CMD0`。这类动作命令的 ACK 通常表示固件报告动作执行完成，所以 SDK 默认等待时间会比普通配置命令更长。
+`reset()` 对应固件 `CMD1`，`move_ik()` 对应固件 `CMD0`，`standby()` 对应固件 `CMD38`。`standby()` 会进入固件定义的低功耗待机姿态 `[0 -105 90 0 0 0 0]` 并保持锁定，不是卸力或断电。这类动作命令的 ACK 通常表示固件报告动作执行完成，所以 SDK 默认等待时间会比普通配置命令更长。
 
 ## 最小示例：关节级 fast_io
 

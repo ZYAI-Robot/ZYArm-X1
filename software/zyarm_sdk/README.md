@@ -30,7 +30,8 @@ software/zyarm_sdk/
 - `fast_io()` 发送 CMD36，默认不等待 ACK 或新状态。
 - CMD36 返回的状态只表示 measured snapshot/pre-command state，不表示动作完成后的状态。
 - 普通 ACK 默认等待 1 秒，主要用于配置/模式切换命令，便于快速暴露串口、波特率或协议错误。
-- 动作完成 ACK 默认等待 10 秒，用于 `reset()`、`move_ik()` 和同步夹爪等可能真实运动的命令。
+- 动作完成 ACK 默认等待 10 秒，用于 `reset()`、`standby()`、`move_ik()` 和同步夹爪等可能真实运动的命令。
+- `standby()` 发送 CMD38，进入固件定义的低功耗待机姿态 `[0 -105 90 0 0 0 0]` 并保持锁定；它不是卸力或外部断电。
 - 录制动作回放 ACK 默认等待 190 秒，用于覆盖最长 3 分钟动作以及少量通信/收尾余量。
 
 ## Build C++ Examples

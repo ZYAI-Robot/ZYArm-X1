@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# 示例用法：
+#   主从模式：python filtered_master_slave_teleop.py --mode 1 --master COM3 --slave COM5 --freq 50
+#   测试模式：python filtered_master_slave_teleop.py --mode 2 --master COM3 --freq 50
 
 import argparse
 import re

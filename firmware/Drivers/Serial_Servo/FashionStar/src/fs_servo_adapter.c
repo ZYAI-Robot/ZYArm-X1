@@ -144,7 +144,7 @@ static int servo_monitor_batch(const uint8_t *servo_ids, int servo_count, ServoD
 	FSUS_STATUS ret;
 
 	if ((servo_ids == NULL) || (servodata == NULL) || (servo_count <= 0) ||
-	    (servo_count > ARM_JOINTS_NUM)) {
+	    (servo_count > ARM_SERVO_NUM)) {
 		return -1;
 	}
 

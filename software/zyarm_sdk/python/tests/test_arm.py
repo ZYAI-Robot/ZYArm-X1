@@ -43,6 +43,16 @@ def test_query_state_and_latest_cache_sources() -> None:
     assert transport.written_lines[-1] == "[CMD][6]\n"
 
 
+def test_standby_sends_low_power_standby_command() -> None:
+    arm, transport = make_arm()
+
+    result = arm.standby()
+
+    assert result.accepted
+    assert result.command_id == int(CommandId.LOW_POWER_STANDBY)
+    assert transport.written_lines[-1] == "[CMD][38]\n"
+
+
 def test_fast_io_wait_state_labels_cmd36_snapshot() -> None:
     arm, transport = make_arm()
 
@@ -131,13 +141,15 @@ def test_ack_commands_use_semantic_timeouts() -> None:
     transport.send_command = send_and_record  # type: ignore[method-assign]
 
     arm.reset()
+    arm.standby()
     arm.move_ik(200, 0, 100)
     arm.set_gripper(1.0, sync=True)
     arm.play_record(1)
     arm.set_remote_mode(True)
 
     assert seen[0] == (int(CommandId.RESET), True, 2.5)
-    assert seen[1] == (int(CommandId.IK_INVERSE), True, 2.5)
-    assert seen[2] == (int(CommandId.SET_CLAW), True, 2.5)
-    assert seen[3] == (int(CommandId.RECORD_PLAYER), True, 181.0)
-    assert seen[4] == (int(CommandId.REMOTE_MODE), True, None)
+    assert seen[1] == (int(CommandId.LOW_POWER_STANDBY), True, 2.5)
+    assert seen[2] == (int(CommandId.IK_INVERSE), True, 2.5)
+    assert seen[3] == (int(CommandId.SET_CLAW), True, 2.5)
+    assert seen[4] == (int(CommandId.RECORD_PLAYER), True, 181.0)
+    assert seen[5] == (int(CommandId.REMOTE_MODE), True, None)
