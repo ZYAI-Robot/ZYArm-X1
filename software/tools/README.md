@@ -14,3 +14,5 @@
 - `JOYCON_SIXDOF_TUNING_GUIDE.md`：Joy-Con 手感、死区和灵敏度调参参考
 
 运行这些脚本前，请先根据 `requirements.txt` 安装所需 Python 依赖。
+
+Ubuntu/Linux 使用蓝牙 Joy-Con 时，如果系统已连接但脚本检测不到设备，请参考 [手柄遥操](../../docs/05_常用玩法/03_手柄遥操.md) 中的 Ubuntu Joy-Con 依赖补充。

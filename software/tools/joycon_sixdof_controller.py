@@ -16,10 +16,28 @@
 from __future__ import annotations
 
 import math
+import sys
 import threading
 import time
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
+
+
+def _prefer_linux_hidraw_backend():
+    """
+    Linux 蓝牙 Joy-Con 需要 hidraw backend；pyjoycon 内部固定 import hid，
+    因此要在导入 pyjoycon 前把 hidraw 注册成 hid。
+    """
+    if not sys.platform.startswith("linux"):
+        return
+    try:
+        import hidraw
+    except ImportError:
+        return
+    sys.modules["hid"] = hidraw
+
+
+_prefer_linux_hidraw_backend()
 
 from pyjoycon import GyroTrackingJoyCon, get_L_id, get_R_id
 
@@ -1297,6 +1315,3 @@ if __name__ == "__main__":
             time.sleep(0.05)
     except KeyboardInterrupt:
         ctl.stop()
-    
-
-

@@ -1,3 +1,4 @@
 joycon-python
+PyGLM
 hidapi
 pyserial
