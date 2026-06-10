@@ -2,6 +2,7 @@
 #include "inverse_kinematics.h"
 #include "arm_shell.h"
 #include "string.h"
+#include "arm_robot.h"
 
 #define ARM_KINEMATICS_LOG_TAG "KINEMATICS"
 
@@ -18,23 +19,34 @@ void print_transform(const transform_matrix_t *T)
 }
 float cal_joint_angle_distance(float joints_arr1[6], float joints_arr2[6])
 {
-    float sum = 0;
-    for (int i = 0; i < 6; i++) {
-        float d = joints_arr1[i] - joints_arr2[i];
-        sum += d * d;
+    // 找到最大的角度差
+    float max = 0;
+    float diff = 0;
+    for (int i = 0; i < 6; i++) { 
+        diff = fabsf(joints_arr1[i] - joints_arr2[i]);
+        if (diff > max) {
+            max = diff;
+        }
     }
-    return sqrtf(sum);
+    return max;
 }
 
 int arm_cal_interval_with_angle_diff(float target_joints[6], float *interval_ms)
 {
     float current_joints[6];
+    float tmp_interval_ms = 0;
     for (int i = 0; i < 6; i++) {
         current_joints[i] = g_arm_robot.joint[i].angle;
     }
 
     float distance = cal_joint_angle_distance(target_joints, current_joints);
-    *interval_ms = fabsf(distance * 1000 / g_arm_robot.cfg.speed);
+    tmp_interval_ms = fabsf(distance * 1000 / g_arm_robot.cfg.speed);
+
+    if (tmp_interval_ms < ARM_MIN_MOVE_TIME_MS) {
+        tmp_interval_ms = ARM_MIN_MOVE_TIME_MS;
+    }
+
+    *interval_ms = tmp_interval_ms;
     return 0;
 }
 

@@ -19,6 +19,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "usart.h"
+#include "arm_robot.h"
 
 /* USER CODE BEGIN 0 */
 
@@ -42,7 +43,11 @@ void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
+#if defined(ARM_ROBOT_VERSION_TOC) && (ARM_ROBOT_VERSION_TOC == 1U)
   huart1.Init.BaudRate = 230400;
+#else
+  huart1.Init.BaudRate = 512000;
+#endif
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;

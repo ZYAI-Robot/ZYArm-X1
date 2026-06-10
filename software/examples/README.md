@@ -9,9 +9,12 @@ software/examples/
 ├── robot_arm_pick/          # 基础机械臂抓取示例
 ├── camera_pick/
 │   ├── orbbec/              # Orbbec 相机抓取示例
-│   └── deptrum/             # Deptrum 相机触摸/抓取参考示例
+│   ├── deptrum/             # Deptrum 相机触摸/抓取参考示例
+│   └── handeye/             # RGB 手眼标定与颜色方块抓放示例
 └── build.sh                 # Orbbec 示例构建脚本
 ```
+
+`camera_pick/handeye/` 是独立 Python 示例，不参与上面的 CMake 构建流程。安装与运行方式见该目录下的 `README.md`。
 
 ## 构建 Orbbec 示例
 

@@ -26,7 +26,13 @@ extern "C" {
 #define ARM_SYNC_NO_CHANGE                  (-999.9f) // 关节同步控制时不改变该关节位置标志
 #define ARM_FLOAT_TOLERANCE                 (1e-6f) // 浮点数比较精度
 #define ARM_MAX_ERROR_COUNT                 10
-#define ARM_DEFAULT_ACCEL_TIME              200 // 默认加速度时间，单位毫秒
+#define ARM_DEFAULT_ACCEL_TIME              200     // 默认加速度时间，单位毫秒
+
+#if defined(ARM_ROBOT_VERSION_TOC) && (ARM_ROBOT_VERSION_TOC == 1U)
+#define ARM_MIN_MOVE_TIME_MS                1000    // 最小运动时间
+#else
+#define ARM_MIN_MOVE_TIME_MS                500    // 最小运动时间
+#endif
 
 // #define ARM_CALC_ACCEL_TIME(interval)       ((int)roundf(ARM_ACCEL_TIME_FACTOR * (interval)))  // 计算加速度时间
 #define ARM_CALC_ACCEL_TIME(interval)       (ARM_DEFAULT_ACCEL_TIME)

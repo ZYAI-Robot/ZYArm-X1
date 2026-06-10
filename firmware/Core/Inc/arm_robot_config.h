@@ -5,7 +5,7 @@
 
 #define ARM_ROBOT_SERVO_USE_FASHION_START       1
 #define ARM_SERVO_NUM                           9       // 舵机总数，包括夹爪
-#define ARM_JOINT_SPEED_DEFAULT                 50.0f   // 默认关节速度 degree/s
+#define ARM_JOINT_SPEED_DEFAULT                 30.0f   // 默认关节速度 degree/s
 #define ARM_NAME_MAX_LEN                        32      // 全局名称最大长度
 
 #define ARM_SERVO_UART                          (&huart6)
