@@ -4,17 +4,22 @@ import sys
 import unittest
 from pathlib import Path
 
-import cv2
 import numpy as np
 
+try:
+    import cv2
+except ModuleNotFoundError:  # pragma: no cover - depends on local env
+    cv2 = None
 
-HAND_EYE_ROOT = Path(__file__).resolve().parents[1]
-SRC_DIR = HAND_EYE_ROOT / "src"
+
+FIXED_RGB_COLOR_PICK_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = FIXED_RGB_COLOR_PICK_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from block_vision import BlockVision
-from zyarm_pick_controller import DEFAULT_CONFIG_PATH, load_handeye_config
+if cv2 is not None:
+    from color_block_vision import ColorBlockVision
+    from fixed_color_pick_controller import DEFAULT_CONFIG_PATH, load_fixed_rgb_color_pick_config
 
 
 def _synthetic_frame(
@@ -59,10 +64,11 @@ class FakeCapture:
         self.opened = False
 
 
-class BlockVisionTests(unittest.TestCase):
+@unittest.skipIf(cv2 is None, "OpenCV is required for fixed RGB color vision tests")
+class ColorBlockVisionTests(unittest.TestCase):
     def setUp(self) -> None:
         self.frame = _synthetic_frame()
-        self.vision = BlockVision({"device": 0, "width": 320, "height": 240})
+        self.vision = ColorBlockVision({"device": 0, "width": 320, "height": 240})
         self.vision.build_color_model(self.frame, (105, 70, 110, 100))
 
     def test_roi_color_model_handles_red_hue_wrap(self) -> None:
@@ -119,7 +125,7 @@ class BlockVisionTests(unittest.TestCase):
         self.assertEqual(int(np.count_nonzero(mask)), 0)
 
     def test_square_ignores_min_area_rect_quarter_turn_ambiguity(self) -> None:
-        vision = BlockVision({"device": 0, "width": 320, "height": 240})
+        vision = ColorBlockVision({"device": 0, "width": 320, "height": 240})
         first = _synthetic_frame(size=(60, 60), angle_deg=3.0)
         vision.build_color_model(first, (120, 80, 80, 80))
 
@@ -133,7 +139,7 @@ class BlockVisionTests(unittest.TestCase):
         self.assertEqual(result.angle_deg, 0.0)
 
     def test_invalid_roi_is_rejected(self) -> None:
-        vision = BlockVision({"device": 0})
+        vision = ColorBlockVision({"device": 0})
         with self.assertRaisesRegex(ValueError, "cancelled or is empty"):
             vision.build_color_model(self.frame, (0, 0, 0, 0))
 
@@ -145,7 +151,7 @@ class BlockVisionTests(unittest.TestCase):
             capture_args.append(args)
             return capture
 
-        vision = BlockVision(
+        vision = ColorBlockVision(
             {
                 "device": 0,
                 "width": 320,
@@ -187,7 +193,7 @@ class BlockVisionTests(unittest.TestCase):
 
     def test_invalid_camera_stream_config_is_rejected_before_open(self) -> None:
         factory_calls = []
-        vision = BlockVision(
+        vision = ColorBlockVision(
             {"device": 0, "fourcc": "TOO_LONG", "fps": 30.0},
             capture_factory=lambda *args: factory_calls.append(args),
         )
@@ -199,7 +205,7 @@ class BlockVisionTests(unittest.TestCase):
 
     def test_camera_rejects_pixel_format_fallback(self) -> None:
         capture = FakeCapture(self.frame, fourcc="YUY2")
-        vision = BlockVision(
+        vision = ColorBlockVision(
             {
                 "device": 0,
                 "width": 320,
@@ -217,8 +223,8 @@ class BlockVisionTests(unittest.TestCase):
 
 
 def run_live_debug() -> int:
-    camera, _board, _task = load_handeye_config(DEFAULT_CONFIG_PATH)
-    vision = BlockVision(camera)
+    camera, _board, _task = load_fixed_rgb_color_pick_config(DEFAULT_CONFIG_PATH)
+    vision = ColorBlockVision(camera)
     try:
         vision.open()
         first_frame = vision.read_frame()
@@ -226,8 +232,8 @@ def run_live_debug() -> int:
         while True:
             frame = vision.read_frame()
             result, mask = vision.detect(frame)
-            cv2.imshow("BlockVision", vision.draw_result(frame, result))
-            cv2.imshow("BlockVision mask", mask)
+            cv2.imshow("ColorBlockVision", vision.draw_result(frame, result))
+            cv2.imshow("ColorBlockVision mask", mask)
             key = cv2.waitKey(1) & 0xFF
             if key in (27, ord("q")):
                 return 0

@@ -6,10 +6,14 @@
   控制器契约的单一事实来源。这里统一定义控制器身份、标准动作语义、默认关节分组和 Gazebo 投影。
 - `config/zyarm_x1_standard_controllers.yaml`
   `x1_standard` 机械臂在非 Gazebo 模式下的控制器投影。
+- `config/zyarm_x1_plus_controllers.yaml`
+  `x1_plus` 机械臂在非 Gazebo 模式下的控制器投影，关节集合和接口语义参考 `x1_standard`。
 - `config/zyarm_x1_standard_gazebo_controllers.yaml`
   Gazebo 双指夹爪模式下的控制器投影。
 - `config/zyarm_x1_standard_real_controllers.yaml`
   真机 ros2_control 控制器投影，默认 50Hz，state interface 只使用 position。
+- `config/zyarm_x1_plus_real_controllers.yaml`
+  `x1_plus` 真机 ros2_control 控制器投影，默认 50Hz，state interface 只使用 position。
 
 这层的作用：
 
@@ -21,6 +25,6 @@
 建议阅读顺序：
 
 1. 先看 `controller_contract.yaml`，理解控制器身份、动作语义和不同运行模式下的关节分组。
-2. 再看 `zyarm_x1_standard_controllers.yaml`，理解 non-gazebo/default 模式如何把契约投影成 `ros2_control` 参数。
+2. 再看 `zyarm_x1_standard_controllers.yaml` 和 `zyarm_x1_plus_controllers.yaml`，理解 non-gazebo/default 模式如何把契约投影成 `ros2_control` 参数。
 3. 再看 `zyarm_x1_standard_gazebo_controllers.yaml`，理解 Gazebo 双指夹爪投影与默认模式的差异。
-4. 最后看 `zyarm_x1_standard_real_controllers.yaml`，理解真机 50Hz position-only 控制器投影。
+4. 最后看 `zyarm_x1_standard_real_controllers.yaml` 和 `zyarm_x1_plus_real_controllers.yaml`，理解真机 50Hz position-only 控制器投影。

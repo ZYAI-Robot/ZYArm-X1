@@ -36,6 +36,7 @@ public:
   CommandResult set_speed(double speed);
   std::optional<ArmState> get_latest_state(std::optional<double> max_age_ms = std::nullopt) const;
   std::optional<ArmState> query_state(std::chrono::milliseconds timeout);
+  std::optional<ServoTemperatures> query_servo_temperatures(std::chrono::milliseconds timeout);
   FastIoResult fast_io(
     const JointArray & positions,
     const std::array<bool, kJointCount> & apply_mask = all_joints_mask(),
@@ -49,6 +50,13 @@ public:
   CommandResult set_master_slave_lpf(double alpha);
   ArmFrameStats get_frame_stats() const;
   void reset_frame_stats();
+  void enable_serial_log(
+    const std::string & path,
+    bool include_tx = true,
+    bool include_rx = true,
+    std::optional<std::chrono::milliseconds> flush_interval = std::nullopt);
+  void flush_serial_log();
+  void disable_serial_log();
 
   std::shared_ptr<Transport> transport() const;
   const JointMapping & mapping() const;

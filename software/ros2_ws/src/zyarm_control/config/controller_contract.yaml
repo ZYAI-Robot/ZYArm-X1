@@ -8,6 +8,26 @@ real_hardware_standard_control:
   moveit_launch: demo_x1_standard_real.launch.py
   bringup_launch: bringup_x1_standard_real_ros2_control.launch.py
 
+models:
+  x1_standard:
+    controller_manager: zyarm_x1_standard_controller_manager
+    ros2_control_system: ZyarmX1StandardSystem
+    mock_bringup_launch: bringup_x1_standard_ros2_control.launch.py
+    real_bringup_launch: bringup_x1_standard_real_ros2_control.launch.py
+    mock_moveit_launch: demo_x1_standard.launch.py
+    real_moveit_launch: demo_x1_standard_real.launch.py
+    controller_config: zyarm_x1_standard_controllers.yaml
+    real_controller_config: zyarm_x1_standard_real_controllers.yaml
+  x1_plus:
+    controller_manager: zyarm_x1_plus_controller_manager
+    ros2_control_system: ZyarmX1PlusSystem
+    mock_bringup_launch: bringup_x1_plus_ros2_control.launch.py
+    real_bringup_launch: bringup_x1_plus_real_ros2_control.launch.py
+    mock_moveit_launch: demo_x1_plus.launch.py
+    real_moveit_launch: demo_x1_plus_real.launch.py
+    controller_config: zyarm_x1_plus_controllers.yaml
+    real_controller_config: zyarm_x1_plus_real_controllers.yaml
+
 controllers:
   joint_state_broadcaster:
     type: joint_state_broadcaster/JointStateBroadcaster

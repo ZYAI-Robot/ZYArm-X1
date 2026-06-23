@@ -162,6 +162,42 @@ HAL_StatusTypeDef W25Q128_Test(uint32_t timeout)
         return HAL_ERROR;
     }
 
+    /* Test 9.2.1: Repeated 1->0 writes within the same byte */
+    safe_printf("Test 9.2.1: Repeated bit clear writes...\r\n");
+    ret = W25Q128_EraseSectors(0, W25Q128_SECTOR_SIZE, timeout);
+    if (ret != HAL_OK)
+    {
+        safe_printf("Erase sector for repeated bit clear test failed: %d\r\n", ret);
+        return ret;
+    }
+
+    uint8_t bitClearValue = 0xFF;
+    for (i = 0; i < 8; i++)
+    {
+        bitClearValue = (uint8_t)(bitClearValue & (uint8_t)(~(1U << i)));
+        ret = W25Q128_Write(0, &bitClearValue, 1, timeout);
+        if (ret != HAL_OK)
+        {
+            safe_printf("Repeated bit clear write failed at bit %d: %d\r\n", i, ret);
+            return ret;
+        }
+
+        ret = W25Q128_Read(0, readData, 1, timeout);
+        if (ret != HAL_OK)
+        {
+            safe_printf("Repeated bit clear read failed at bit %d: %d\r\n", i, ret);
+            return ret;
+        }
+
+        if (readData[0] != bitClearValue)
+        {
+            safe_printf("Repeated bit clear verify failed at bit %d: expected 0x%02X, got 0x%02X\r\n",
+                        i, bitClearValue, readData[0]);
+            return HAL_ERROR;
+        }
+    }
+    safe_printf("Repeated bit clear writes passed!\r\n");
+
     safe_printf("Write edge cases passed!\r\n");
     
     /* Test 9.3: Write across page boundary */

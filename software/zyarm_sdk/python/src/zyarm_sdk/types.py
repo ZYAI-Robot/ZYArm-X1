@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 
 ARM_JOINT_COUNT = 6
@@ -35,6 +35,13 @@ class ArmState:
     @property
     def age_ms(self) -> float:
         return _age_ms(self.timestamp)
+
+
+@dataclass(frozen=True)
+class ServoTemperatures:
+    temperatures_c: Dict[int, float]
+    timestamp: float
+    raw_line: str = ""
 
 
 @dataclass(frozen=True)

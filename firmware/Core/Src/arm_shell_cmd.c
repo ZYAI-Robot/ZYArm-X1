@@ -1,12 +1,14 @@
 #include "arm_shell.h"
 #include "arm_robot_kinematics.h"
 #include "commit_id.h"
+#include "arm_first_use_runtime.h"
 #include "arm_flash.h"
 #include "arm_recorder.h"
 #include <string.h>
 #include "arm_remote.h"
 #include "arm_master_slave.h"
 #include "arm_status_report.h"
+#include "arm_monitor.h"
 #include "fs_usart.h"
 #include <stdio.h>
 
@@ -21,9 +23,16 @@ static const char* HW_VERSION = "FS_V2.0 ToB";
 
 static const char* SW_VERSION = GIT_COMMIT_ID;
 static const char* BUILD_DATE = __DATE__ " " __TIME__;
+
+#if defined(ARM_ROBOT_VERSION_TOC) && (ARM_ROBOT_VERSION_TOC == 1U)
 static const float g_low_power_standby_target[ARM_JOINTS_NUM] = {
     0.0f, -105.0f, 90.0f, 0.0f, 0.0f, 0.0f, 0.0f
 };
+#else
+static const float g_low_power_standby_target[ARM_JOINTS_NUM] = {
+    0.0f, -140.0f, 90.0f, 0.0f, 0.0f, 0.0f, 0.0f
+};
+#endif
 
 static void arm_parse_joint_targets(
     const ArmShellCmdPackage *cmd,
@@ -250,7 +259,7 @@ static void handle_joint_sync(const ArmShellCmdPackage *cmd)
     }
 
     if (fast) {
-        if (arm_joint_sync_move(target_angles) != 0) {
+        if (arm_joint_sync_move_with_monitor_policy(target_angles, ARM_MOTION_MONITOR_STREAM_IDLE_HOLD) != 0) {
             ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "joint_sync fast path failed\n");
         }
         return;
@@ -311,6 +320,25 @@ static void handle_get_version(const ArmShellCmdPackage *cmd)
 {
     send_string_response(cmd->cmd_id, "\nHardware Version: %s \nSoftware Version: %s \nBuild Date: %s\n",
                  HW_VERSION, SW_VERSION, BUILD_DATE);
+    send_ack_completed(cmd->cmd_id, 0);
+}
+
+static void handle_first_use_runtime(const ArmShellCmdPackage *cmd)
+{
+    ArmFirstUseRuntimeInfo info;
+
+    send_ack_received(cmd->cmd_id);
+    arm_first_use_runtime_get_info(&info);
+    send_string_response(
+        cmd->cmd_id,
+        "FIRST_USE_RUNTIME: status=%s runtime_minutes=%lu record_format_version=%lu firmware_commit_id=%s firmware_build_time=\"%s\" error_reason=%s\n",
+        arm_first_use_runtime_status_string(info.status),
+        (unsigned long)info.runtime_minutes,
+        (unsigned long)info.record_format_version,
+        info.firmware_commit_id,
+        info.firmware_build_time,
+        info.error_reason
+    );
     send_ack_completed(cmd->cmd_id, 0);
 }
 
@@ -1029,7 +1057,7 @@ static void handle_joint_io_fast(const ArmShellCmdPackage *cmd)
         return;
     }
 
-    ret = arm_joint_sync_move(target_angles);
+    ret = arm_joint_sync_move_with_monitor_policy(target_angles, ARM_MOTION_MONITOR_STREAM_IDLE_HOLD);
     if (ret != 0) {
         ARM_LOGE_TAG(ARM_SHELL_CMD_LOG_TAG, "joint_io_fast sync move failed, ret=%d\n", ret);
         return;
@@ -1085,6 +1113,7 @@ const ArmShellCmd g_shell_cmd_list[] = {
     [CMD_ID_JOINT_IO_FAST] = {"joint_io_fast", "Batch read joint snapshot, fast sync move, and output [STATUS] with 7 parameters: j0 j1 j2 j3 j4 j5 claw", handle_joint_io_fast, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_IK_SOLVE] = {"ik_solve", "Calculate IK joint solution without moving with 6 parameters: x y z rx ry rz", handle_ik_solve, CMD_PARSE_FORMAT_FLOAT},
     [CMD_ID_STANDBY] = {"standby", "Move to low-power standby pose [0 -105 90 0 0 0 0] and keep joints locked", handle_standby, CMD_PARSE_FORMAT_FLOAT},
+    [CMD_ID_FIRST_USE_RUNTIME] = {"first_use_runtime", "Query first-use runtime state", handle_first_use_runtime, CMD_PARSE_FORMAT_FLOAT},
 };
 
 void shell_show_help()
@@ -1101,6 +1130,7 @@ void shell_show_help()
 void shell_handle_stop()
 {
     arm_robot_request_stop();
+    arm_monitor_cancel_all_joint_motion();
 
     // 删除正在工作的任务
     if ((g_arm_robot.state != ARM_STATE_IDLE) 

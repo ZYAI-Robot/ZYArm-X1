@@ -1,0 +1,59 @@
+camera:
+  index: 1
+  width: 1920
+  height: 1080
+  fourcc: MJPG
+  fps: 30
+  warmup_frames: 1
+  buffersize: 1
+  camera_matrix:
+    - [966.66666667, 0.0, 960.0]
+    - [0.0, 966.66666667, 540.0]
+    - [0.0, 0.0, 1.0]
+  dist_coeffs: [0.0, 0.0, 0.0, 0.0, 0.0]
+
+marker:
+  dictionary: DICT_4X4_50
+  id: 0
+  size_mm: 30.0
+  max_reprojection_error_px: 4.0
+
+observe_pose:
+  x_mm: 200.0
+  y_mm: 0.0
+  z_mm: 200.0
+  rx_deg: 0.0
+  ry_deg: -30.0
+  rz_deg: 0.0
+
+place_pose:
+  x_mm: 160.0
+  y_mm: -90.0
+  z_mm: -70.0
+  rx_deg: 0.0
+  ry_deg: 0.0
+  rz_deg: 0.0
+
+mapping:
+  camera_to_tool:
+    translation_mm: [54.8, 0.0, 56.8]
+    rotation_deg: [0.0, 30.0, 0.0]
+  opencv_to_camera:
+    rotation_matrix:
+      - [0.0, -1.0, 0.0]
+      - [-1.0, 0.0, 0.0]
+      - [0.0, 0.0, -1.0]
+  grasp_offset_base_xy_mm: [-35.0, -20.0]
+  max_xy_offset_mm: 300.0
+
+task:
+  safe_z_mm: 60.0
+  grasp_z_mm: -80.0
+  grasp_pause_s: 1.0
+
+loop:
+  max_cycles: null
+  wait_for_user: false
+
+safety:
+  require_marker_usable: true

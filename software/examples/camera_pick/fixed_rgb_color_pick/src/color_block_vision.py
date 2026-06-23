@@ -44,7 +44,7 @@ class HSVColorModel:
     value_range: tuple[int, int]
 
 
-class BlockVision:
+class ColorBlockVision:
     """RGB camera and color-block observations for the pick controller."""
 
     DEFAULT_WARMUP_FRAMES = 5

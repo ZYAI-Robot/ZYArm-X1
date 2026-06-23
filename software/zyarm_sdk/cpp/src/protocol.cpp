@@ -15,6 +15,7 @@ const std::regex kStatusRegex(
   R"(\[STATUS\]\s*J0:([-\d.]+)\s*J1:([-\d.]+)\s*J2:([-\d.]+)\s*J3:([-\d.]+)\s*J4:([-\d.]+)\s*J5:([-\d.]+)\s*CLAW:([-\d.]+))");
 const std::regex kMasterDataRegex(
   R"(\[MD\]\[(\d+)\]\[([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\])");
+const std::regex kServoTempFieldRegex(R"(S(\d+):(\S+))");
 
 std::optional<JointArray> parse_values(const std::smatch & match, std::size_t first)
 {
@@ -126,6 +127,48 @@ std::optional<MasterDataFrame> parse_master_data_line(
   MasterDataFrame frame;
   frame.frame_id = std::stoi(match[1].str());
   frame.values = *values;
+  frame.received_at = received_at;
+  frame.sequence = sequence;
+  frame.raw_line = line;
+  return frame;
+}
+
+std::optional<ServoTemperatureFrame> parse_servo_temperature_line(
+  const std::string & line,
+  std::uint64_t sequence,
+  Clock::time_point received_at)
+{
+  const std::string marker = "[SERVO_TEMP]";
+  const auto marker_index = line.find(marker);
+  if (marker_index == std::string::npos) {
+    return std::nullopt;
+  }
+  const auto payload = line.substr(marker_index + marker.size());
+  std::map<int, double> temperatures;
+  for (auto iter = std::sregex_iterator(payload.begin(), payload.end(), kServoTempFieldRegex);
+       iter != std::sregex_iterator();
+       ++iter) {
+    const auto & match = *iter;
+    const int servo_id = std::stoi(match[1].str());
+    if (servo_id <= 0) {
+      return std::nullopt;
+    }
+    const auto field = match[2].str();
+    try {
+      std::size_t parsed = 0;
+      temperatures[servo_id] = std::stod(field, &parsed);
+      if (parsed != field.size()) {
+        return std::nullopt;
+      }
+    } catch (const std::exception &) {
+      return std::nullopt;
+    }
+  }
+  if (temperatures.empty()) {
+    return std::nullopt;
+  }
+  ServoTemperatureFrame frame;
+  frame.temperatures_c = std::move(temperatures);
   frame.received_at = received_at;
   frame.sequence = sequence;
   frame.raw_line = line;

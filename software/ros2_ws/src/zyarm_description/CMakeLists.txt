@@ -6,6 +6,7 @@ find_package(ament_cmake REQUIRED)
 if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_x1_standard_xacro_gazebo tests/test_x1_standard_xacro_gazebo.py)
+  ament_add_pytest_test(test_x1_plus_xacro tests/test_x1_plus_xacro.py)
 endif()
 
 install(

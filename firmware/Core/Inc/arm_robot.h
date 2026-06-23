@@ -52,7 +52,6 @@ typedef struct {
     float angle;
 } ServoSyncData;
 
-
 typedef struct {
     void (*init)(UART_HandleTypeDef *uart);
     int (*set_angle_interval)(int servo_id, float angle, int interval_ms);
@@ -100,6 +99,12 @@ enum ArmJointStopMode {
     ARM_JOINT_STOP_DAMPING_MODE, // 阻尼模式
 };
 
+enum ArmMotionMonitorPolicy {
+    ARM_MOTION_MONITOR_AUTO_HOLD = 0,
+    ARM_MOTION_MONITOR_STREAM_IDLE_HOLD,
+    ARM_MOTION_MONITOR_DISABLED,
+};
+
 /* 保持4字节对齐 */
 typedef struct {
     uint32_t checksum;
@@ -138,7 +143,20 @@ int arm_robot_reset(void);
 bool arm_joint_check_angle_valid(int joint_id, float angle);
 int arm_set_joint_angle_interval(int joint_id, float angle, int interval_ms);
 int arm_set_joint_angle_interval_acc(int joint_id, float angle, int interval_ms, int acc_ms, int dec_ms);
+int arm_set_joint_angle_interval_acc_with_monitor_policy(
+    int joint_id,
+    float angle,
+    int interval_ms,
+    int acc_ms,
+    int dec_ms,
+    enum ArmMotionMonitorPolicy monitor_policy
+);
 int arm_set_joint_angle_velocity_acc(int joint_id, float angle, float velocity, int acc_ms, int dec_ms);
+void arm_joint_arm_monitor(
+    int joint_id,
+    float angle,
+    enum ArmMotionMonitorPolicy monitor_policy
+);
 
 /**
      * 获取机械臂关节角度
@@ -175,7 +193,10 @@ void arm_robot_set_sync(uint32_t sync_mask, bool sync);
      */
 bool arm_wait_sync_finished(int timeout_ms);
 int arm_joint_sync_move(float joint_angles[ARM_JOINTS_NUM]);
-void arm_monitor(void);
+int arm_joint_sync_move_with_monitor_policy(
+    float joint_angles[ARM_JOINTS_NUM],
+    enum ArmMotionMonitorPolicy monitor_policy
+);
 
 #ifdef __cplusplus
 }

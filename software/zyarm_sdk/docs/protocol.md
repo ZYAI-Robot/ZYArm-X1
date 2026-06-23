@@ -17,6 +17,7 @@ SDK 通过换行分隔的文本命令和固件通信。基础格式如下：
 ## 关键命令
 
 - `CMD6 status`：主动状态查询。SDK 只有在调用 `query_state()` 时才发送 `[CMD][6]`，并等待新的 `[STATUS]`。
+- `CMD6 status verbose=1`：批量舵机温度查询。SDK 调用 `query_servo_temperatures()` 时发送 `[CMD][6][1]`，等待新的 `[SERVO_TEMP]` 行。该接口用于低频诊断和产测，不应放入高频运动控制循环。
 - `CMD17 status_report`：周期状态上报。适合诊断和低频状态流，不建议和高频控制循环混用，除非调用方明确区分状态来源并接受时序差异。
 - `CMD32 master-slave`：进入主从模式。主臂会输出 `[MD]` 帧，SDK 可将其转换成遥操作动作。
 - `CMD33 master-slave stop`：退出主从模式。
@@ -27,6 +28,7 @@ SDK 通过换行分隔的文本命令和固件通信。基础格式如下：
 
 - `ACK_COMPLETED: CMD_ID=<id>, SUCCESS|ERROR`：命令完成 ACK。SDK 只有在对应接口选择等待 ACK 时才会阻塞等待它。
 - `[STATUS] J0:<v> J1:<v> J2:<v> J3:<v> J4:<v> J5:<v> CLAW:<v>`：固件单位下的机械臂状态。
+- `[SERVO_TEMP] S1:<c> ... S9:<c>`：批量舵机温度，单位为摄氏度。SDK 将其解析为独立的 `ServoTemperatures`，不并入 `ArmState`。
 - `[MD][<frame_id>][<j0> <j1> <j2> <j3> <j4> <j5> <claw>]`：主臂遥操作数据。当前固件的 `frame_id` 是 `0..9` 循环值，因此 SDK 的 frame-gap 统计只能作为弱观察事件，不是完整的固件侧丢帧计数。
 
 ## 不改变占位值
@@ -47,3 +49,31 @@ SDK 通过换行分隔的文本命令和固件通信。基础格式如下：
 一个串口连接应只有一个接收所有者。SDK 的 `transport` 负责在内存中解析 ACK、`[STATUS]` 和 `[MD]`，并维护缓存；解析逻辑不依赖文件日志。
 
 如果外部工具同时读取同一个串口，SDK 可能收不到完整返回行，进而出现 ACK 超时、状态陈旧或遥操作丢帧。
+
+## 串口日志
+
+SDK 默认不把串口日志落盘。需要诊断或产测追溯时，调用方可以显式开启：
+
+```python
+arm.enable_serial_log("reports/ZA000001/serial.log", flush_interval_s=None)
+arm.flush_serial_log()
+arm.disable_serial_log()
+```
+
+开启后日志记录 SDK 发送的 TX 命令行和接收的 RX 原始文本行，包括无法被协议解析的未知行。日志格式用于人工排查和产测追溯，不作为长期稳定的机器解析协议。
+
+默认不主动周期 flush，交给操作系统缓冲；`flush_interval_s` 大于 0 时按周期执行普通 `flush()`，不会默认执行 `fsync()`。`disable_serial_log()` 和 `close()` 会 flush 并关闭日志文件。
+
+C++ SDK 提供等价接口：
+
+```cpp
+auto temps = arm.query_servo_temperatures(std::chrono::milliseconds(1000));
+
+arm.enable_serial_log(
+  "reports/ZA000001/serial.log",
+  true,
+  true,
+  std::nullopt);
+arm.flush_serial_log();
+arm.disable_serial_log();
+```

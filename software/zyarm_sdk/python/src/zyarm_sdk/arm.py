@@ -1,14 +1,15 @@
 from __future__ import annotations
 
+import os
 import time
-from typing import Optional, Sequence
+from typing import Optional, Sequence, Union
 
 from .config import ZyArmConfig
 from .mapping import JointMapping
 from .protocol import CommandId, MasterSlaveRole
 from .safety import SafetyController, validate_apply_mask
 from .transport import SerialTransport
-from .types import ArmFrameStats, ArmState, CommandResult, FastIoResult, StateSource
+from .types import ArmFrameStats, ArmState, CommandResult, FastIoResult, ServoTemperatures, StateSource
 
 
 class ZyArm:
@@ -146,6 +147,22 @@ class ZyArm:
             return None
         return self._state_from_frame(frame, StateSource.CMD6_QUERY)
 
+    def query_servo_temperatures(
+        self,
+        *,
+        timeout_ms: float = 1000.0,
+    ) -> Optional[ServoTemperatures]:
+        before = self.transport.servo_temperature_sequence
+        self.transport.send_command(CommandId.STATUS, [1.0], wait_ack=False)
+        frame = self.transport.wait_for_servo_temperatures_after(before, timeout_ms / 1000.0)
+        if frame is None:
+            return None
+        return ServoTemperatures(
+            temperatures_c=dict(frame.temperatures_c),
+            timestamp=frame.received_at,
+            raw_line=frame.raw_line,
+        )
+
     def fast_io(
         self,
         positions: Sequence[float],
@@ -203,6 +220,27 @@ class ZyArm:
 
     def reset_frame_stats(self) -> None:
         self.transport.reset_frame_stats()
+
+    def enable_serial_log(
+        self,
+        log_path: Union[os.PathLike[str], str],
+        *,
+        include_tx: bool = True,
+        include_rx: bool = True,
+        flush_interval_s: Optional[float] = None,
+    ) -> None:
+        self.transport.enable_serial_log(
+            log_path,
+            include_tx=include_tx,
+            include_rx=include_rx,
+            flush_interval_s=flush_interval_s,
+        )
+
+    def flush_serial_log(self) -> None:
+        self.transport.flush_serial_log()
+
+    def disable_serial_log(self) -> None:
+        self.transport.disable_serial_log()
 
     def _send_ack_command(
         self,

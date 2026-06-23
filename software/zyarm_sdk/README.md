@@ -27,7 +27,9 @@ software/zyarm_sdk/
 - SDK/ROS 使用“用户角度表达”：机械臂初始姿态下 6 个关节都为 `0`。固件 `[STATUS]` 和 `[MD]` 中的角度是“固件角度表达”，包含硬件零偏和符号约定。两者通过 `mapping` 层转换，业务代码默认不要直接混用。
 - `get_latest_state()` 只读缓存，不发串口命令。
 - `query_state()` 发送 CMD6 并等待 fresh `[STATUS]`。
+- `query_servo_temperatures()` 发送 `[CMD][6][1]` 并等待 fresh `[SERVO_TEMP]`，返回摄氏度温度映射；它是低频诊断/产测接口，不适合高频控制循环。
 - `fast_io()` 发送 CMD36，默认不等待 ACK 或新状态。
+- 串口日志默认不落盘；需要诊断追溯时显式调用 `enable_serial_log()`，可用 `flush_serial_log()` 主动 flush，并用 `disable_serial_log()` 关闭。
 - CMD36 返回的状态只表示 measured snapshot/pre-command state，不表示动作完成后的状态。
 - 普通 ACK 默认等待 1 秒，主要用于配置/模式切换命令，便于快速暴露串口、波特率或协议错误。
 - 动作完成 ACK 默认等待 10 秒，用于 `reset()`、`standby()`、`move_ik()` 和同步夹爪等可能真实运动的命令。

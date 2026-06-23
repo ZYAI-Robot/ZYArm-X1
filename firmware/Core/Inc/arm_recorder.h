@@ -53,6 +53,7 @@ int arm_record_info_show(const char *name);
 int arm_record_flash_erase(const char *name);
 void arm_record_manger_list(uint32_t cmd_id);
 int arm_record_flash_malloc(void);
+int arm_record_flash_validate_capacity(void);
 
 #ifdef __cplusplus
 }

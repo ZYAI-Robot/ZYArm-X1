@@ -1,6 +1,10 @@
 #include "zyarm_sdk/transport.hpp"
 
+#include <chrono>
 #include <cstring>
+#include <ctime>
+#include <iomanip>
+#include <sstream>
 #include <stdexcept>
 #include <utility>
 
@@ -24,6 +28,32 @@ namespace zyarm_sdk
 namespace
 {
 constexpr auto kFrameRateWindow = std::chrono::seconds(1);
+
+std::string format_serial_log_timestamp()
+{
+  const auto now = std::chrono::system_clock::now();
+  const auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+    now.time_since_epoch()) % 1000;
+  const auto time = std::chrono::system_clock::to_time_t(now);
+  std::tm tm{};
+#ifdef _WIN32
+  localtime_s(&tm, &time);
+#else
+  localtime_r(&time, &tm);
+#endif
+  std::ostringstream stream;
+  stream << std::put_time(&tm, "%Y-%m-%dT%H:%M:%S")
+         << "." << std::setw(3) << std::setfill('0') << ms.count();
+  return stream.str();
+}
+
+std::string strip_line_end(std::string line)
+{
+  while (!line.empty() && (line.back() == '\n' || line.back() == '\r')) {
+    line.pop_back();
+  }
+  return line;
+}
 
 #ifndef _WIN32
 speed_t baud_to_constant(int baudrate)
@@ -165,6 +195,7 @@ void SerialTransport::close()
     fd_ = -1;
   }
 #endif
+  disable_serial_log();
 }
 
 bool SerialTransport::is_connected() const
@@ -198,6 +229,7 @@ bool SerialTransport::send_command(
     throw TransportError("failed to write serial command");
   }
 #endif
+  write_serial_log("TX", line);
   if (!wait_ack) {
     return true;
   }
@@ -244,6 +276,21 @@ std::optional<MasterDataFrame> SerialTransport::wait_for_master_data_after(
   return latest_master_data_;
 }
 
+std::optional<ServoTemperatureFrame> SerialTransport::wait_for_servo_temperatures_after(
+  std::uint64_t sequence,
+  std::chrono::milliseconds timeout)
+{
+  std::unique_lock<std::mutex> lock(mutex_);
+  const auto deadline = Clock::now() + timeout;
+  while (!latest_servo_temperatures_.has_value() ||
+         latest_servo_temperatures_->sequence <= sequence) {
+    if (cv_.wait_until(lock, deadline) == std::cv_status::timeout) {
+      return std::nullopt;
+    }
+  }
+  return latest_servo_temperatures_;
+}
+
 std::uint64_t SerialTransport::status_sequence() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
@@ -254,6 +301,12 @@ std::uint64_t SerialTransport::master_data_sequence() const
 {
   std::lock_guard<std::mutex> lock(mutex_);
   return master_data_sequence_;
+}
+
+std::uint64_t SerialTransport::servo_temperature_sequence() const
+{
+  std::lock_guard<std::mutex> lock(mutex_);
+  return servo_temperature_sequence_;
 }
 
 ArmFrameStats SerialTransport::get_frame_stats() const
@@ -273,6 +326,46 @@ void SerialTransport::reset_frame_stats()
   stats_last_master_frame_id_.reset();
   status_rate_timestamps_.clear();
   master_rate_timestamps_.clear();
+}
+
+void SerialTransport::enable_serial_log(
+  const std::string & path,
+  bool include_tx,
+  bool include_rx,
+  std::optional<std::chrono::milliseconds> flush_interval)
+{
+  if (flush_interval.has_value() && flush_interval->count() < 0) {
+    throw TransportError("serial log flush interval must be non-negative");
+  }
+  std::lock_guard<std::mutex> lock(serial_log_mutex_);
+  close_serial_log_locked();
+  serial_log_stream_.open(path, std::ios::out | std::ios::app);
+  if (!serial_log_stream_.is_open()) {
+    throw TransportError("failed to open serial log file: " + path);
+  }
+  serial_log_include_tx_ = include_tx;
+  serial_log_include_rx_ = include_rx;
+  if (flush_interval.has_value() && flush_interval->count() > 0) {
+    serial_log_flush_interval_ = flush_interval;
+  } else {
+    serial_log_flush_interval_.reset();
+  }
+  serial_log_last_flush_at_ = Clock::now();
+}
+
+void SerialTransport::flush_serial_log()
+{
+  std::lock_guard<std::mutex> lock(serial_log_mutex_);
+  if (serial_log_stream_.is_open()) {
+    serial_log_stream_.flush();
+    serial_log_last_flush_at_ = Clock::now();
+  }
+}
+
+void SerialTransport::disable_serial_log()
+{
+  std::lock_guard<std::mutex> lock(serial_log_mutex_);
+  close_serial_log_locked();
 }
 
 void SerialTransport::feed_line_for_test(const std::string & line)
@@ -331,6 +424,7 @@ void SerialTransport::rx_loop()
 
 void SerialTransport::handle_rx_line(const std::string & line)
 {
+  write_serial_log("RX", line);
   if (auto ack = parse_ack(line)) {
     std::lock_guard<std::mutex> lock(mutex_);
     ack_state_[ack->command_id] = ack->success;
@@ -350,6 +444,13 @@ void SerialTransport::handle_rx_line(const std::string & line)
     master->sequence = ++master_data_sequence_;
     latest_master_data_ = *master;
     record_master_data_stats(*master);
+    cv_.notify_all();
+    return;
+  }
+  if (auto servo_temperatures = parse_servo_temperature_line(line, servo_temperature_sequence_ + 1)) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    servo_temperatures->sequence = ++servo_temperature_sequence_;
+    latest_servo_temperatures_ = *servo_temperatures;
     cv_.notify_all();
   }
 }
@@ -382,6 +483,38 @@ void SerialTransport::prune_rate_windows(Clock::time_point now) const
   }
   while (!master_rate_timestamps_.empty() && master_rate_timestamps_.front() < cutoff) {
     master_rate_timestamps_.pop_front();
+  }
+}
+
+void SerialTransport::write_serial_log(const std::string & direction, const std::string & line)
+{
+  std::lock_guard<std::mutex> lock(serial_log_mutex_);
+  if (!serial_log_stream_.is_open()) {
+    return;
+  }
+  if (direction == "TX" && !serial_log_include_tx_) {
+    return;
+  }
+  if (direction == "RX" && !serial_log_include_rx_) {
+    return;
+  }
+  serial_log_stream_ << format_serial_log_timestamp() << " "
+                     << direction << " "
+                     << strip_line_end(line) << "\n";
+  if (serial_log_flush_interval_.has_value()) {
+    const auto now = Clock::now();
+    if (now - serial_log_last_flush_at_ >= *serial_log_flush_interval_) {
+      serial_log_stream_.flush();
+      serial_log_last_flush_at_ = now;
+    }
+  }
+}
+
+void SerialTransport::close_serial_log_locked()
+{
+  if (serial_log_stream_.is_open()) {
+    serial_log_stream_.flush();
+    serial_log_stream_.close();
   }
 }
 

@@ -42,8 +42,8 @@ class CalibrationResult:
     planar_marker_errors_px: dict[int, float] = field(default_factory=dict)
 
 
-class HandEyeCalibrator:
-    """Eye-to-hand PnP calibration and base-plane projection."""
+class FixedCameraCalibrator:
+    """Fixed RGB camera PnP calibration and base-plane projection."""
 
     REQUIRED_MARKER_IDS = (0, 1, 2, 3)
     MAX_REPROJECTION_ERROR_PX = 8.0
@@ -645,7 +645,7 @@ class HandEyeCalibrator:
         raw_distortion = self.camera_config.get("dist_coeffs")
         if raw_matrix is None or raw_distortion is None:
             raise ValueError(
-                "Fill camera.camera_matrix and camera.dist_coeffs in config/handeye.py"
+                "Fill camera.camera_matrix and camera.dist_coeffs in config/fixed_rgb_color_pick.py"
             )
 
         matrix = np.asarray(raw_matrix, dtype=np.float64)
@@ -665,7 +665,7 @@ class HandEyeCalibrator:
     ) -> tuple[str, dict[int, np.ndarray], np.ndarray, np.ndarray]:
         dictionary_name = self.board_config.get("dictionary")
         if not isinstance(dictionary_name, str) or not dictionary_name:
-            raise ValueError("Fill board.dictionary in config/handeye.py")
+            raise ValueError("Fill board.dictionary in config/fixed_rgb_color_pick.py")
 
         board_to_base_xy = self._validate_board_to_base_xy()
         origin = self._validate_board_origin(board_to_base_xy)
@@ -721,7 +721,7 @@ class HandEyeCalibrator:
             if raw_points is None:
                 raise ValueError(
                     "Fill board.marker_corners_base_mm"
-                    f"[{marker_id}] in config/handeye.py"
+                    f"[{marker_id}] in config/fixed_rgb_color_pick.py"
                 )
             points = np.asarray(raw_points, dtype=np.float64)
             if points.shape != (4, 3) or not np.all(np.isfinite(points)):

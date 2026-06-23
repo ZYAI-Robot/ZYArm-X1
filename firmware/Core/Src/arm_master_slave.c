@@ -53,7 +53,7 @@ static int arm_master_read_joint_angles(float angles[ARM_JOINTS_NUM])
 // 从臂同步设置关节角度
 static int arm_slave_set_joint_angles_real(float angles[ARM_JOINTS_NUM])
 {
-    int ret = arm_joint_sync_move(angles);
+    int ret = arm_joint_sync_move_with_monitor_policy(angles, ARM_MOTION_MONITOR_STREAM_IDLE_HOLD);
     if (ret != 0) {
         ARM_LOGE_TAG(ARM_MASTER_SLAVE_LOG_TAG, "Slave arm set joint angles failed\n");
         return -1;
@@ -240,7 +240,7 @@ void arm_slave_set_angles(float angles[ARM_JOINTS_NUM])
         }
     }
 
-    arm_joint_sync_move(limited_angles);
+    (void)arm_joint_sync_move_with_monitor_policy(limited_angles, ARM_MOTION_MONITOR_STREAM_IDLE_HOLD);
 }
 
 // 主臂任务函数：主臂进入卸力模式，循环读取关节角并打印供上位机采集

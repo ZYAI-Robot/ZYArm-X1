@@ -4,8 +4,12 @@
 
 - `bringup_x1_standard_ros2_control.launch.py`
   启动基础 ros2_control 控制链，适合验证模型、controller manager 和控制器配置。
+- `bringup_x1_plus_ros2_control.launch.py`
+  启动 Plus 模型的基础 ros2_control 控制链，适合无串口验证模型、controller manager 和控制器配置。
 - `bringup_x1_standard_real_ros2_control.launch.py`
   启动真机 ros2_control 底层控制链，不启动 MoveIt；适合单独验证 controller manager、控制器和 `/joint_states`。
+- `bringup_x1_plus_real_ros2_control.launch.py`
+  启动 Plus 模型的真机 ros2_control 底层控制链，不启动 MoveIt；操作方式、指令、接口和电机语义参考 `x1_standard`。
 - `teleop_only_system.launch.py`
   启动 `zyarm_hardware/arm_system.launch.py`，默认读取 `zyarm_hardware/config/teleop_pair_real.yaml`，用于纯 ROS 主从遥操调试。
 

@@ -2,6 +2,7 @@
 
 #include <array>
 #include <chrono>
+#include <map>
 #include <optional>
 #include <string>
 
@@ -34,6 +35,13 @@ struct ArmState
   std::string raw_line;
 
   double age_ms() const;
+};
+
+struct ServoTemperatures
+{
+  std::map<int, double> temperatures_c;
+  Clock::time_point timestamp{Clock::now()};
+  std::string raw_line;
 };
 
 struct CommandResult

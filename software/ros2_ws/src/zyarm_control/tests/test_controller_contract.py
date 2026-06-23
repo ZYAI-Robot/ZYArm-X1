@@ -44,6 +44,26 @@ def test_controller_contract_defines_default_and_gazebo_gripper_variants():
         "moveit_launch": "demo_x1_standard_real.launch.py",
         "bringup_launch": "bringup_x1_standard_real_ros2_control.launch.py",
     }
+    assert contract["models"]["x1_standard"] == {
+        "controller_manager": "zyarm_x1_standard_controller_manager",
+        "ros2_control_system": "ZyarmX1StandardSystem",
+        "mock_bringup_launch": "bringup_x1_standard_ros2_control.launch.py",
+        "real_bringup_launch": "bringup_x1_standard_real_ros2_control.launch.py",
+        "mock_moveit_launch": "demo_x1_standard.launch.py",
+        "real_moveit_launch": "demo_x1_standard_real.launch.py",
+        "controller_config": "zyarm_x1_standard_controllers.yaml",
+        "real_controller_config": "zyarm_x1_standard_real_controllers.yaml",
+    }
+    assert contract["models"]["x1_plus"] == {
+        "controller_manager": "zyarm_x1_plus_controller_manager",
+        "ros2_control_system": "ZyarmX1PlusSystem",
+        "mock_bringup_launch": "bringup_x1_plus_ros2_control.launch.py",
+        "real_bringup_launch": "bringup_x1_plus_real_ros2_control.launch.py",
+        "mock_moveit_launch": "demo_x1_plus.launch.py",
+        "real_moveit_launch": "demo_x1_plus_real.launch.py",
+        "controller_config": "zyarm_x1_plus_controllers.yaml",
+        "real_controller_config": "zyarm_x1_plus_real_controllers.yaml",
+    }
     assert arm["real_state_interfaces"] == ["position"]
     assert gripper["real_state_interfaces"] == ["position"]
 
@@ -53,8 +73,10 @@ def test_ros2_control_controller_files_match_contract_projections():
     control_dir = root / "software/ros2_ws" / "src" / "zyarm_control" / "config"
     contract = _load_yaml(control_dir / "controller_contract.yaml")
     default_config = _load_yaml(control_dir / "zyarm_x1_standard_controllers.yaml")
+    plus_default_config = _load_yaml(control_dir / "zyarm_x1_plus_controllers.yaml")
     gazebo_config = _load_yaml(control_dir / "zyarm_x1_standard_gazebo_controllers.yaml")
     real_config = _load_yaml(control_dir / "zyarm_x1_standard_real_controllers.yaml")
+    plus_real_config = _load_yaml(control_dir / "zyarm_x1_plus_real_controllers.yaml")
 
     arm_contract = contract["controllers"]["arm_controller"]
     gripper_contract = contract["controllers"]["gripper_controller"]
@@ -64,7 +86,15 @@ def test_ros2_control_controller_files_match_contract_projections():
         == arm_contract["joints"]["default"]
     )
     assert (
+        plus_default_config["arm_controller"]["ros__parameters"]["joints"]
+        == arm_contract["joints"]["default"]
+    )
+    assert (
         default_config["gripper_controller"]["ros__parameters"]["joints"]
+        == gripper_contract["joints"]["default"]
+    )
+    assert (
+        plus_default_config["gripper_controller"]["ros__parameters"]["joints"]
         == gripper_contract["joints"]["default"]
     )
     assert (
@@ -80,11 +110,23 @@ def test_ros2_control_controller_files_match_contract_projections():
         == arm_contract["joints"]["real_ros2_control"]
     )
     assert (
+        plus_real_config["arm_controller"]["ros__parameters"]["joints"]
+        == arm_contract["joints"]["real_ros2_control"]
+    )
+    assert (
         real_config["gripper_controller"]["ros__parameters"]["joints"]
         == gripper_contract["joints"]["real_ros2_control"]
     )
     assert (
+        plus_real_config["gripper_controller"]["ros__parameters"]["joints"]
+        == gripper_contract["joints"]["real_ros2_control"]
+    )
+    assert (
         default_config["zyarm_x1_standard_controller_manager"]["ros__parameters"]["arm_controller"]["type"]
+        == arm_contract["type"]
+    )
+    assert (
+        plus_default_config["zyarm_x1_plus_controller_manager"]["ros__parameters"]["arm_controller"]["type"]
         == arm_contract["type"]
     )
     assert (
@@ -95,10 +137,18 @@ def test_ros2_control_controller_files_match_contract_projections():
         real_config["zyarm_x1_standard_controller_manager"]["ros__parameters"]["update_rate"]
         == contract["controller_manager"]["real_update_rate"]
     )
+    assert (
+        plus_real_config["zyarm_x1_plus_controller_manager"]["ros__parameters"]["update_rate"]
+        == contract["controller_manager"]["real_update_rate"]
+    )
     assert real_config["arm_controller"]["ros__parameters"]["command_interfaces"] == ["position"]
     assert real_config["arm_controller"]["ros__parameters"]["state_interfaces"] == ["position"]
     assert real_config["gripper_controller"]["ros__parameters"]["command_interfaces"] == ["position"]
     assert real_config["gripper_controller"]["ros__parameters"]["state_interfaces"] == ["position"]
+    assert plus_real_config["arm_controller"]["ros__parameters"]["command_interfaces"] == ["position"]
+    assert plus_real_config["arm_controller"]["ros__parameters"]["state_interfaces"] == ["position"]
+    assert plus_real_config["gripper_controller"]["ros__parameters"]["command_interfaces"] == ["position"]
+    assert plus_real_config["gripper_controller"]["ros__parameters"]["state_interfaces"] == ["position"]
 
 
 def test_moveit_controller_mappings_match_contract():

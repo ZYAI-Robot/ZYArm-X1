@@ -1,7 +1,12 @@
 #include <cassert>
 #include <chrono>
+#include <cstdio>
+#include <fstream>
 #include <cmath>
+#include <iterator>
 #include <memory>
+#include <string>
+#include <thread>
 
 #include "fake_transport.hpp"
 #include "zyarm_sdk/arm.hpp"
@@ -73,6 +78,22 @@ int main()
   assert(!timeout_state.has_value());
   assert(fake->written_lines.back() == "[CMD][6]\n");
 
+  fake->feed_line("[SERVO_TEMP] S1:30 S2:31");
+  auto stale_temps = arm.query_servo_temperatures(std::chrono::milliseconds(1));
+  assert(!stale_temps.has_value());
+  assert(fake->written_lines.back() == "[CMD][6][1]\n");
+
+  std::thread temp_feeder([fake]() {
+    std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    fake->feed_line("[SERVO_TEMP] S1:32 S2:30 S9:29");
+  });
+  auto temps = arm.query_servo_temperatures(std::chrono::milliseconds(100));
+  temp_feeder.join();
+  assert(temps.has_value());
+  assert(temps->temperatures_c.at(1) == 32);
+  assert(temps->temperatures_c.at(9) == 29);
+  assert(temps->raw_line == "[SERVO_TEMP] S1:32 S2:30 S9:29");
+
   auto before = fake->status_sequence();
   fake->feed_line("[STATUS] J0:0 J1:-180 J2:90 J3:0 J4:0 J5:0 CLAW:10");
   assert(fake->status_sequence() == before + 1);
@@ -93,5 +114,34 @@ int main()
   assert(stats.master_data_received == 0);
   assert(stats.master_data_gap_count == 0);
   assert(stats.master_data_rate_hz == 0.0);
+
+  const std::string log_path = "test_serial_log.txt";
+  std::remove(log_path.c_str());
+  auto before_log_count = fake->written_line_count();
+  arm.set_speed(10);
+  assert(before_log_count + 1 == fake->written_line_count());
+  assert(!std::ifstream(log_path).good());
+
+  arm.enable_serial_log(log_path, true, true, std::chrono::milliseconds(1));
+  arm.set_speed(12);
+  std::this_thread::sleep_for(std::chrono::milliseconds(2));
+  fake->feed_line("UNPARSED AFTER ENABLE");
+  arm.flush_serial_log();
+  std::ifstream log_file(log_path);
+  std::string log_text(
+    (std::istreambuf_iterator<char>(log_file)),
+    std::istreambuf_iterator<char>());
+  assert(log_text.find(" TX [CMD][11][12]") != std::string::npos);
+  assert(log_text.find(" RX UNPARSED AFTER ENABLE") != std::string::npos);
+
+  arm.disable_serial_log();
+  const auto disabled_log_text = log_text;
+  arm.set_speed(13);
+  std::ifstream log_file_after_disable(log_path);
+  log_text.assign(
+    (std::istreambuf_iterator<char>(log_file_after_disable)),
+    std::istreambuf_iterator<char>());
+  assert(log_text == disabled_log_text);
+  std::remove(log_path.c_str());
   return 0;
 }

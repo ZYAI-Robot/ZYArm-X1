@@ -25,6 +25,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "arm_monitor.h"
 #include "arm_robot.h"
 #include "w2812.h"
 /* USER CODE END Includes */
@@ -118,14 +119,18 @@ void StartDefaultTask(void *argument)
   /* USER CODE BEGIN StartDefaultTask */
   /* Infinite loop */
   arm_robot_init();
+  arm_monitor_set_task_handle(debugTaskHandle);
   GPIO_PinState pin_state = GPIO_PIN_RESET;
 
   for(;;)
   {
+    uint32_t monitor_delay_ms;
+
 		HAL_GPIO_WritePin(GPIOE,GPIO_PIN_10,pin_state);
     arm_monitor();
 		pin_state = (pin_state == GPIO_PIN_RESET) ? GPIO_PIN_SET : GPIO_PIN_RESET;
-    osDelay(500);
+    monitor_delay_ms = arm_monitor_get_next_delay_ms();
+    (void)osThreadFlagsWait(ARM_MONITOR_WAKE_FLAG, osFlagsWaitAny, monitor_delay_ms);
   }
   /* USER CODE END StartDefaultTask */
 }

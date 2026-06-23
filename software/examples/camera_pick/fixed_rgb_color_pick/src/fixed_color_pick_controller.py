@@ -12,18 +12,18 @@ from typing import Any, Callable, Mapping, Optional
 
 import cv2
 
-from block_vision import (
+from color_block_vision import (
     BlockDetection,
     BlockDetectionCancelled,
     BlockDetectionTimeout,
-    BlockVision,
+    ColorBlockVision,
 )
-from handeye_calibration import CalibrationResult, HandEyeCalibrator
+from fixed_camera_calibration import CalibrationResult, FixedCameraCalibrator
 
 
-HAND_EYE_ROOT = Path(__file__).resolve().parents[1]
-REPOSITORY_ROOT = HAND_EYE_ROOT.parents[3]
-DEFAULT_CONFIG_PATH = HAND_EYE_ROOT / "config" / "handeye.py"
+FIXED_RGB_COLOR_PICK_ROOT = Path(__file__).resolve().parents[1]
+REPOSITORY_ROOT = FIXED_RGB_COLOR_PICK_ROOT.parents[3]
+DEFAULT_CONFIG_PATH = FIXED_RGB_COLOR_PICK_ROOT / "config" / "fixed_rgb_color_pick.py"
 SDK_SRC = REPOSITORY_ROOT / "software" / "zyarm_sdk" / "python" / "src"
 
 
@@ -35,8 +35,8 @@ class PickTarget:
     yaw_deg: float
 
 
-class ZYArmPickController:
-    """Orchestrate one calibration and repeated pick-and-place cycles."""
+class FixedColorPickController:
+    """Orchestrate fixed RGB camera calibration and repeated color-block pick cycles."""
 
     GRASP_RX_DEG = 0.0
     GRASP_RY_DEG = 0.0
@@ -53,8 +53,8 @@ class ZYArmPickController:
         task_config: Mapping[str, Any],
         *,
         arm_port: str,
-        vision: Optional[BlockVision] = None,
-        calibrator: Optional[HandEyeCalibrator] = None,
+        vision: Optional[ColorBlockVision] = None,
+        calibrator: Optional[FixedCameraCalibrator] = None,
         arm: Any = None,
         arm_factory: Optional[Callable[[str], Any]] = None,
         sleep_fn: Callable[[float], None] = time.sleep,
@@ -65,8 +65,8 @@ class ZYArmPickController:
         board = dict(board_config)
         self.task_config = dict(task_config)
         self.arm_port = arm_port
-        self.vision = vision or BlockVision(camera)
-        self.calibrator = calibrator or HandEyeCalibrator(
+        self.vision = vision or ColorBlockVision(camera)
+        self.calibrator = calibrator or FixedCameraCalibrator(
             camera,
             board,
         )
@@ -282,7 +282,7 @@ class ZYArmPickController:
         color_frame = self.vision.read_frame()
         self.vision.select_color_roi(color_frame)
         calibration = self.calibrate_camera_stable()
-        print("Color model and handeye calibration are ready for this session")
+        print("Color model and fixed camera calibration are ready for this session")
         return calibration
 
     def recognize_target(self, calibration: CalibrationResult) -> PickTarget:
@@ -432,7 +432,7 @@ class ZYArmPickController:
     def _task_float(self, name: str) -> float:
         value = self.task_config.get(name)
         if value is None:
-            raise ValueError(f"Fill task.{name} in config/handeye.py")
+            raise ValueError(f"Fill task.{name} in config/fixed_rgb_color_pick.py")
         try:
             return float(value)
         except (TypeError, ValueError) as exc:
@@ -483,14 +483,14 @@ class ZYArmPickController:
             pass
 
 
-def load_handeye_config(config_path: Path) -> tuple[Mapping[str, Any], ...]:
+def load_fixed_rgb_color_pick_config(config_path: Path) -> tuple[Mapping[str, Any], ...]:
     path = config_path.resolve()
     if not path.is_file():
-        raise FileNotFoundError(f"Handeye config does not exist: {path}")
+        raise FileNotFoundError(f"Fixed RGB color pick config does not exist: {path}")
 
-    spec = importlib.util.spec_from_file_location("zyarm_handeye_config", path)
+    spec = importlib.util.spec_from_file_location("zyarm_fixed_rgb_color_pick_config", path)
     if spec is None or spec.loader is None:
-        raise RuntimeError(f"Unable to load handeye config: {path}")
+        raise RuntimeError(f"Unable to load fixed RGB color pick config: {path}")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
@@ -516,15 +516,15 @@ def parse_args(argv: Optional[list[str]] = None) -> argparse.Namespace:
         "--config",
         type=Path,
         default=DEFAULT_CONFIG_PATH,
-        help="Path to config/handeye.py.",
+        help="Path to config/fixed_rgb_color_pick.py.",
     )
     return parser.parse_args(argv)
 
 
 def main(argv: Optional[list[str]] = None) -> int:
     args = parse_args(argv)
-    camera, board, task = load_handeye_config(args.config)
-    controller = ZYArmPickController(
+    camera, board, task = load_fixed_rgb_color_pick_config(args.config)
+    controller = FixedColorPickController(
         camera,
         board,
         task,

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <map>
 #include <optional>
 #include <string>
 #include <vector>
@@ -59,6 +60,14 @@ struct MasterDataFrame
   std::string raw_line;
 };
 
+struct ServoTemperatureFrame
+{
+  std::map<int, double> temperatures_c;
+  Clock::time_point received_at{Clock::now()};
+  std::uint64_t sequence{0};
+  std::string raw_line;
+};
+
 std::string format_number(double value);
 std::string format_command(int command_id, const std::vector<double> & params = {});
 std::string format_command(CommandId command_id, const std::vector<double> & params = {});
@@ -70,6 +79,10 @@ std::optional<StatusFrame> parse_status_line(
   std::uint64_t sequence = 0,
   Clock::time_point received_at = Clock::now());
 std::optional<MasterDataFrame> parse_master_data_line(
+  const std::string & line,
+  std::uint64_t sequence = 0,
+  Clock::time_point received_at = Clock::now());
+std::optional<ServoTemperatureFrame> parse_servo_temperature_line(
   const std::string & line,
   std::uint64_t sequence = 0,
   Clock::time_point received_at = Clock::now());

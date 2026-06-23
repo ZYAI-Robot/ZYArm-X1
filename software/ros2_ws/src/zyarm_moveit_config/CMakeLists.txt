@@ -7,6 +7,7 @@ if(BUILD_TESTING)
   find_package(ament_cmake_pytest REQUIRED)
   ament_add_pytest_test(test_demo_x1_standard_gazebo_launch tests/test_demo_x1_standard_gazebo_launch.py)
   ament_add_pytest_test(test_demo_x1_standard_real_launch tests/test_demo_x1_standard_real_launch.py)
+  ament_add_pytest_test(test_demo_x1_plus_launch tests/test_demo_x1_plus_launch.py)
 endif()
 
 install(

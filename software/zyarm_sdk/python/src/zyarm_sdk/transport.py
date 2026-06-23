@@ -1,19 +1,24 @@
 from __future__ import annotations
 
 from collections import deque
+from datetime import datetime
+import os
+from pathlib import Path
 import threading
 import time
-from typing import Callable, Deque, Dict, List, Optional, Sequence
+from typing import Callable, Deque, Dict, List, Optional, Sequence, TextIO, Union
 
 from .config import ZyArmConfig
 from .errors import TransportError
 from .protocol import (
     CommandId,
     MasterDataFrame,
+    ServoTemperatureFrame,
     StatusFrame,
     format_command,
     parse_ack,
     parse_master_data_line,
+    parse_servo_temperature_line,
     parse_status_line,
 )
 from .types import ArmFrameStats
@@ -41,8 +46,10 @@ class SerialTransport:
         self._status_cv = threading.Condition()
         self._latest_status: Optional[StatusFrame] = None
         self._latest_master_data: Optional[MasterDataFrame] = None
+        self._latest_servo_temperatures: Optional[ServoTemperatureFrame] = None
         self._status_sequence = 0
         self._master_sequence = 0
+        self._servo_temperature_sequence = 0
         self._stats_status_received = 0
         self._stats_master_data_received = 0
         self._stats_master_data_gap_count = 0
@@ -50,6 +57,12 @@ class SerialTransport:
         self._status_rate_timestamps: Deque[float] = deque()
         self._master_rate_timestamps: Deque[float] = deque()
         self._rx_buffer = bytearray()
+        self._serial_log_lock = threading.RLock()
+        self._serial_log_file: Optional[TextIO] = None
+        self._serial_log_include_tx = True
+        self._serial_log_include_rx = True
+        self._serial_log_flush_interval_s: Optional[float] = None
+        self._serial_log_last_flush_at = 0.0
 
     @property
     def is_connected(self) -> bool:
@@ -87,6 +100,7 @@ class SerialTransport:
         self._serial = None
         if serial is not None and hasattr(serial, "close"):
             serial.close()
+        self.disable_serial_log()
 
     def send_command(
         self,
@@ -106,6 +120,7 @@ class SerialTransport:
             serial.write(line.encode("utf-8"))
             if hasattr(serial, "flush"):
                 serial.flush()
+            self._write_serial_log("TX", line)
         if not wait_ack:
             return True
         return self.wait_for_ack(command_id, timeout_s=timeout_s)
@@ -132,6 +147,11 @@ class SerialTransport:
         with self._status_cv:
             return self._master_sequence
 
+    @property
+    def servo_temperature_sequence(self) -> int:
+        with self._status_cv:
+            return self._servo_temperature_sequence
+
     def latest_status(self) -> Optional[StatusFrame]:
         with self._status_cv:
             return self._latest_status
@@ -157,6 +177,24 @@ class SerialTransport:
             while True:
                 if self._latest_master_data is not None and self._latest_master_data.sequence > sequence:
                     return self._latest_master_data
+                remaining = deadline - time.perf_counter()
+                if remaining <= 0.0:
+                    return None
+                self._status_cv.wait(timeout=remaining)
+
+    def wait_for_servo_temperatures_after(
+        self,
+        sequence: int,
+        timeout_s: float,
+    ) -> Optional[ServoTemperatureFrame]:
+        deadline = time.perf_counter() + float(timeout_s)
+        with self._status_cv:
+            while True:
+                if (
+                    self._latest_servo_temperatures is not None
+                    and self._latest_servo_temperatures.sequence > sequence
+                ):
+                    return self._latest_servo_temperatures
                 remaining = deadline - time.perf_counter()
                 if remaining <= 0.0:
                     return None
@@ -211,6 +249,7 @@ class SerialTransport:
                     self._handle_rx_line(line)
 
     def _handle_rx_line(self, line: str) -> None:
+        self._write_serial_log("RX", line)
         ack = parse_ack(line)
         if ack is not None:
             with self._ack_cv:
@@ -237,6 +276,17 @@ class SerialTransport:
                 self._latest_master_data = master
                 self._record_master_data_stats(master)
                 self._status_cv.notify_all()
+                return
+
+            next_servo_temperature_sequence = self._servo_temperature_sequence + 1
+            servo_temperatures = parse_servo_temperature_line(
+                line,
+                sequence=next_servo_temperature_sequence,
+            )
+            if servo_temperatures is not None:
+                self._servo_temperature_sequence = next_servo_temperature_sequence
+                self._latest_servo_temperatures = servo_temperatures
+                self._status_cv.notify_all()
 
     def _record_master_data_stats(self, frame: MasterDataFrame) -> None:
         frame_id = int(frame.frame_id) % 10
@@ -260,6 +310,65 @@ class SerialTransport:
         serial = self._serial
         if serial is not None and hasattr(serial, name):
             getattr(serial, name)(*args)
+
+    def enable_serial_log(
+        self,
+        log_path: Union[os.PathLike[str], str],
+        *,
+        include_tx: bool = True,
+        include_rx: bool = True,
+        flush_interval_s: Optional[float] = None,
+    ) -> None:
+        interval = None if flush_interval_s is None else float(flush_interval_s)
+        if interval is not None and interval < 0.0:
+            raise ValueError("flush_interval_s must be non-negative")
+
+        path = Path(log_path)
+        if path.parent:
+            path.parent.mkdir(parents=True, exist_ok=True)
+
+        with self._serial_log_lock:
+            self._close_serial_log_locked()
+            self._serial_log_file = path.open("a", encoding="utf-8")
+            self._serial_log_include_tx = bool(include_tx)
+            self._serial_log_include_rx = bool(include_rx)
+            self._serial_log_flush_interval_s = interval if interval and interval > 0.0 else None
+            self._serial_log_last_flush_at = time.perf_counter()
+
+    def flush_serial_log(self) -> None:
+        with self._serial_log_lock:
+            if self._serial_log_file is not None:
+                self._serial_log_file.flush()
+                self._serial_log_last_flush_at = time.perf_counter()
+
+    def disable_serial_log(self) -> None:
+        with self._serial_log_lock:
+            self._close_serial_log_locked()
+
+    def _close_serial_log_locked(self) -> None:
+        if self._serial_log_file is not None:
+            self._serial_log_file.flush()
+            self._serial_log_file.close()
+            self._serial_log_file = None
+
+    def _write_serial_log(self, direction: str, line: str) -> None:
+        with self._serial_log_lock:
+            log_file = self._serial_log_file
+            if log_file is None:
+                return
+            if direction == "TX" and not self._serial_log_include_tx:
+                return
+            if direction == "RX" and not self._serial_log_include_rx:
+                return
+
+            timestamp = datetime.now().isoformat(timespec="milliseconds")
+            log_file.write(f"{timestamp} {direction} {line.rstrip()}\n")
+            interval = self._serial_log_flush_interval_s
+            if interval is not None:
+                now = time.perf_counter()
+                if now - self._serial_log_last_flush_at >= interval:
+                    log_file.flush()
+                    self._serial_log_last_flush_at = now
 
     def _load_pyserial_factory(self) -> SerialFactory:
         try:
@@ -287,6 +396,7 @@ class MemoryTransport(SerialTransport):
 
     def close(self) -> None:
         self._connected = False
+        self.disable_serial_log()
 
     def send_command(
         self,
@@ -298,7 +408,9 @@ class MemoryTransport(SerialTransport):
     ) -> bool:
         if not self._connected:
             raise TransportError("Memory transport is not connected")
-        self.written_lines.append(format_command(command_id, params))
+        line = format_command(command_id, params)
+        self.written_lines.append(line)
+        self._write_serial_log("TX", line)
         if self._auto_ack:
             with self._ack_cv:
                 self._ack_state[int(command_id)] = True

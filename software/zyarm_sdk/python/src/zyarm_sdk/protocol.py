@@ -4,7 +4,7 @@ import re
 import time
 from dataclasses import dataclass
 from enum import IntEnum
-from typing import Iterable, List, Optional, Sequence
+from typing import Dict, Iterable, List, Optional, Sequence
 
 from .errors import ProtocolError
 from .types import JOINT_COUNT, NO_CHANGE_SENTINEL
@@ -17,6 +17,7 @@ STATUS_RE = re.compile(
 MASTER_DATA_RE = re.compile(
     r"\[MD\]\[(\d+)\]\[([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\s+([-\d.]+)\]"
 )
+SERVO_TEMP_FIELD_RE = re.compile(r"S(\d+):(\S+)")
 
 
 class CommandId(IntEnum):
@@ -63,6 +64,14 @@ class StatusFrame:
 class MasterDataFrame:
     frame_id: int
     values: List[float]
+    received_at: float
+    sequence: int
+    raw_line: str
+
+
+@dataclass(frozen=True)
+class ServoTemperatureFrame:
+    temperatures_c: Dict[int, float]
     received_at: float
     sequence: int
     raw_line: str
@@ -150,6 +159,39 @@ def parse_master_data_line(
     )
 
 
+def parse_servo_temperature_line(
+    line: str,
+    *,
+    sequence: int = 0,
+    received_at: Optional[float] = None,
+) -> Optional[ServoTemperatureFrame]:
+    marker = "[SERVO_TEMP]"
+    marker_index = line.find(marker)
+    if marker_index < 0:
+        return None
+
+    temperatures: Dict[int, float] = {}
+    payload = line[marker_index + len(marker):]
+    for match in SERVO_TEMP_FIELD_RE.finditer(payload):
+        servo_id = int(match.group(1))
+        if servo_id <= 0:
+            return None
+        try:
+            temperatures[servo_id] = float(match.group(2))
+        except ValueError:
+            return None
+
+    if not temperatures:
+        return None
+
+    return ServoTemperatureFrame(
+        temperatures_c=temperatures,
+        received_at=time.perf_counter() if received_at is None else float(received_at),
+        sequence=int(sequence),
+        raw_line=line,
+    )
+
+
 __all__ = [
     "NO_CHANGE_SENTINEL",
     "AckFrame",
@@ -157,9 +199,11 @@ __all__ = [
     "MasterSlaveRole",
     "MasterDataFrame",
     "StatusFrame",
+    "ServoTemperatureFrame",
     "format_command",
     "format_joint_io_fast_command",
     "parse_ack",
     "parse_master_data_line",
+    "parse_servo_temperature_line",
     "parse_status_line",
 ]

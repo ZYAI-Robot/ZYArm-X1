@@ -160,7 +160,7 @@ int arm_remote_ik(float x, float y, float z, float rx, float ry, float rz, float
             joint_angles[0], joint_angles[1], joint_angles[2], joint_angles[3], joint_angles[4], joint_angles[5], joint_angles[6]);
     }
 
-    ret = arm_joint_sync_move(joint_angles);
+    ret = arm_joint_sync_move_with_monitor_policy(joint_angles, ARM_MOTION_MONITOR_STREAM_IDLE_HOLD);
     if (ret != 0) {
         ARM_LOGE_TAG(ARM_REMOTE_LOG_TAG, "Joint sync move failed\n");
         return -1;

@@ -11,20 +11,28 @@ from unittest.mock import patch
 
 import numpy as np
 
+try:
+    import cv2 as _cv2  # noqa: F401
+except ModuleNotFoundError:  # pragma: no cover - depends on local env
+    _HAS_OPENCV = False
+else:
+    _HAS_OPENCV = True
 
-HAND_EYE_ROOT = Path(__file__).resolve().parents[1]
-SRC_DIR = HAND_EYE_ROOT / "src"
+
+FIXED_RGB_COLOR_PICK_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = FIXED_RGB_COLOR_PICK_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from block_vision import BlockDetection, BlockDetectionTimeout
-from zyarm_pick_controller import (
-    DEFAULT_CONFIG_PATH,
-    PickTarget,
-    ZYArmPickController,
-    load_handeye_config,
-    main,
-)
+if _HAS_OPENCV:
+    from color_block_vision import BlockDetection, BlockDetectionTimeout
+    from fixed_color_pick_controller import (
+        DEFAULT_CONFIG_PATH,
+        FixedColorPickController,
+        PickTarget,
+        load_fixed_rgb_color_pick_config,
+        main,
+    )
 
 
 @dataclass
@@ -131,6 +139,7 @@ class FakeCalibrator:
         return 15.0
 
 
+@unittest.skipUnless(_HAS_OPENCV, "OpenCV is required for fixed RGB pick controller tests")
 class PickControllerTests(unittest.TestCase):
     def _controller(
         self,
@@ -138,9 +147,9 @@ class PickControllerTests(unittest.TestCase):
         arm: FakeArm | None = None,
         safe_z: float | None = 60.0,
         sleep_fn=None,
-    ) -> ZYArmPickController:
+    ) -> FixedColorPickController:
         arm = arm or FakeArm()
-        return ZYArmPickController(
+        return FixedColorPickController(
             {},
             {},
             {
@@ -247,11 +256,11 @@ class PickControllerTests(unittest.TestCase):
         controller = self._controller(arm=arm)
 
         with (
-            patch("zyarm_pick_controller.cv2.destroyAllWindows"),
-            patch("zyarm_pick_controller.cv2.destroyWindow"),
-            patch("zyarm_pick_controller.cv2.imshow"),
+            patch("fixed_color_pick_controller.cv2.destroyAllWindows"),
+            patch("fixed_color_pick_controller.cv2.destroyWindow"),
+            patch("fixed_color_pick_controller.cv2.imshow"),
             patch(
-                "zyarm_pick_controller.cv2.waitKey",
+                "fixed_color_pick_controller.cv2.waitKey",
                 side_effect=(ord(" "), ord("q")),
             ),
         ):
@@ -279,10 +288,10 @@ class PickControllerTests(unittest.TestCase):
 
         controller.execute_pick = execute_pick
         with (
-            patch("zyarm_pick_controller.cv2.destroyAllWindows"),
-            patch("zyarm_pick_controller.cv2.destroyWindow"),
-            patch("zyarm_pick_controller.cv2.imshow") as imshow,
-            patch("zyarm_pick_controller.cv2.waitKey", side_effect=wait_key),
+            patch("fixed_color_pick_controller.cv2.destroyAllWindows"),
+            patch("fixed_color_pick_controller.cv2.destroyWindow"),
+            patch("fixed_color_pick_controller.cv2.imshow") as imshow,
+            patch("fixed_color_pick_controller.cv2.waitKey", side_effect=wait_key),
         ):
             exit_requested = controller.execute_pick_with_live_preview(
                 PickTarget(200.0, 30.0, 0.0, 15.0)
@@ -306,10 +315,10 @@ class PickControllerTests(unittest.TestCase):
 
         controller.execute_pick = execute_pick
         with (
-            patch("zyarm_pick_controller.cv2.destroyAllWindows"),
-            patch("zyarm_pick_controller.cv2.destroyWindow"),
-            patch("zyarm_pick_controller.cv2.imshow"),
-            patch("zyarm_pick_controller.cv2.waitKey", side_effect=wait_key),
+            patch("fixed_color_pick_controller.cv2.destroyAllWindows"),
+            patch("fixed_color_pick_controller.cv2.destroyWindow"),
+            patch("fixed_color_pick_controller.cv2.imshow"),
+            patch("fixed_color_pick_controller.cv2.waitKey", side_effect=wait_key),
         ):
             exit_requested = controller.execute_pick_with_live_preview(
                 PickTarget(200.0, 30.0, 0.0, 15.0)
@@ -387,8 +396,8 @@ class PickControllerTests(unittest.TestCase):
         self.assertIn("Pause after move_to_safe_z: 1.000s", output.getvalue())
         self.assertIn("Arm command [reset_to_home]: reset()", output.getvalue())
 
-    def test_handeye_config_contains_tunable_pick_heights(self) -> None:
-        _camera, _board, task = load_handeye_config(DEFAULT_CONFIG_PATH)
+    def test_fixed_rgb_color_pick_config_contains_tunable_pick_heights(self) -> None:
+        _camera, _board, task = load_fixed_rgb_color_pick_config(DEFAULT_CONFIG_PATH)
 
         values = {
             name: float(task[name])

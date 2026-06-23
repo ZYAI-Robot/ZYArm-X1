@@ -404,6 +404,21 @@
               <FilePath>..\Core\Src\arm_robot.c</FilePath>
             </File>
             <File>
+              <FileName>arm_monitor.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\arm_monitor.c</FilePath>
+            </File>
+            <File>
+              <FileName>arm_w25q128_partition.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\arm_w25q128_partition.c</FilePath>
+            </File>
+            <File>
+              <FileName>arm_first_use_runtime.c</FileName>
+              <FileType>1</FileType>
+              <FilePath>..\Core\Src\arm_first_use_runtime.c</FilePath>
+            </File>
+            <File>
               <FileName>arm_robot_recorder.c</FileName>
               <FileType>1</FileType>
               <FilePath>..\Core\Src\arm_robot_recorder.c</FilePath>

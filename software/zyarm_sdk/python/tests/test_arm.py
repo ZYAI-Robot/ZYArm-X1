@@ -1,9 +1,14 @@
 import math
+import time
+from pathlib import Path
 from typing import Optional
 
 from zyarm_sdk import StateSource, ZyArm, ZyArmConfig
 from zyarm_sdk.protocol import CommandId, MasterSlaveRole
 from zyarm_sdk.transport import MemoryTransport
+
+
+TEST_TMP = Path(__file__).resolve().parent / "_tmp"
 
 
 def make_arm() -> tuple[ZyArm, MemoryTransport]:
@@ -41,6 +46,30 @@ def test_query_state_and_latest_cache_sources() -> None:
     queried = arm.query_state(timeout_ms=1)
     assert queried is None
     assert transport.written_lines[-1] == "[CMD][6]\n"
+
+
+def test_query_servo_temperatures_waits_for_new_frame() -> None:
+    arm, transport = make_arm()
+    transport.feed_line_for_test("[SERVO_TEMP] S1:30 S2:31")
+
+    stale = arm.query_servo_temperatures(timeout_ms=1)
+    assert stale is None
+    assert transport.written_lines[-1] == "[CMD][6][1]\n"
+
+    original_send = transport.send_command
+
+    def send_and_feed(command_id, params=None, *, wait_ack=False, timeout_s=None):
+        ok = original_send(command_id, params, wait_ack=wait_ack, timeout_s=timeout_s)
+        if int(command_id) == int(CommandId.STATUS) and params == [1.0]:
+            transport.feed_line_for_test("[SERVO_TEMP] S1:32 S2:30 S9:29")
+        return ok
+
+    transport.send_command = send_and_feed  # type: ignore[method-assign]
+    fresh = arm.query_servo_temperatures(timeout_ms=10)
+
+    assert fresh is not None
+    assert fresh.temperatures_c == {1: 32.0, 2: 30.0, 9: 29.0}
+    assert fresh.raw_line == "[SERVO_TEMP] S1:32 S2:30 S9:29"
 
 
 def test_standby_sends_low_power_standby_command() -> None:
@@ -120,6 +149,56 @@ def test_frame_stats_track_status_and_master_data_rx() -> None:
     assert reset_stats.master_data_received == 0
     assert reset_stats.master_data_gap_count == 0
     assert reset_stats.master_data_rate_hz == 0.0
+
+
+def _test_log_path(filename: str) -> Path:
+    TEST_TMP.mkdir(exist_ok=True)
+    path = TEST_TMP / filename
+    if path.exists():
+        path.unlink()
+    return path
+
+
+def test_serial_log_is_explicit_and_records_tx_rx() -> None:
+    arm, transport = make_arm()
+    log_path = _test_log_path("serial.log")
+
+    arm.set_speed(10)
+    transport.feed_line_for_test("UNPARSED BEFORE ENABLE")
+    assert not log_path.exists()
+
+    arm.enable_serial_log(log_path)
+    arm.set_speed(12)
+    transport.feed_line_for_test("UNPARSED AFTER ENABLE")
+    arm.flush_serial_log()
+
+    text = log_path.read_text(encoding="utf-8")
+    assert " TX [CMD][11][12]" in text
+    assert " RX UNPARSED AFTER ENABLE" in text
+    assert "UNPARSED BEFORE ENABLE" not in text
+
+    arm.disable_serial_log()
+    disabled_text = log_path.read_text(encoding="utf-8")
+    arm.set_speed(13)
+    assert log_path.read_text(encoding="utf-8") == disabled_text
+    log_path.unlink(missing_ok=True)
+
+
+def test_serial_log_periodic_flush_and_close() -> None:
+    arm, _transport = make_arm()
+    log_path = _test_log_path("serial_periodic.log")
+
+    arm.enable_serial_log(log_path, flush_interval_s=0.001)
+    arm.set_speed(1)
+    time.sleep(0.005)
+    arm.set_speed(2)
+
+    text = log_path.read_text(encoding="utf-8")
+    assert " TX [CMD][11][2]" in text
+
+    arm.close()
+    assert log_path.read_text(encoding="utf-8").count(" TX ") >= 2
+    log_path.unlink(missing_ok=True)
 
 
 def test_ack_commands_use_semantic_timeouts() -> None:

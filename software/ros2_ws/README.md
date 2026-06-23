@@ -83,12 +83,14 @@ relationships:
 
 ```bash
 ros2 launch zyarm_description display_x1_standard.launch.py
+ros2 launch zyarm_description display_x1_plus.launch.py
 ```
 
 启动 `ros2_control` 基础控制链：
 
 ```bash
 ros2 launch zyarm_bringup bringup_x1_standard_ros2_control.launch.py
+ros2 launch zyarm_bringup bringup_x1_plus_ros2_control.launch.py
 ```
 
 直接启动真机硬件实例运行时：
@@ -116,6 +118,7 @@ ros2 launch zyarm_bringup teleop_only_system.launch.py config_file:=/abs/path/to
 
 ```bash
 ros2 launch zyarm_moveit_config demo_x1_standard.launch.py
+ros2 launch zyarm_moveit_config demo_x1_plus.launch.py
 ```
 
 启动 Gazebo + MoveIt + RViz 仿真验证：
@@ -125,16 +128,18 @@ ros2 launch zyarm_moveit_config demo_x1_standard_gazebo.launch.py
 ```
 
 该入口依赖 `ros_gz_sim`、`ros_gz_bridge` 和 Gazebo 相关 ROS 集成环境；若缺失，launch 会在解析或启动阶段失败。
+`x1_plus` 首版暂不提供 Gazebo 入口。
 
 启动 MoveIt 真机入口：
 
 ```bash
 ros2 launch zyarm_moveit_config demo_x1_standard_real.launch.py serial_port:=/dev/ttyUSB0
+ros2 launch zyarm_moveit_config demo_x1_plus_real.launch.py serial_port:=/dev/ttyUSB0
 ```
 
 这个入口会启动：
 
-- `zyarm_bringup/bringup_x1_standard_real_ros2_control.launch.py`
+- 对应型号的 `zyarm_bringup/bringup_*_real_ros2_control.launch.py`
 - `zyarm_hardware_interface`
 - `joint_state_broadcaster`、`arm_controller`、`gripper_controller`
 - `move_group`

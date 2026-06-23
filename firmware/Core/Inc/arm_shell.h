@@ -53,6 +53,7 @@ typedef enum {
     CMD_ID_JOINT_IO_FAST,
     CMD_ID_IK_SOLVE,
     CMD_ID_STANDBY,
+    CMD_ID_FIRST_USE_RUNTIME,
     CMD_ID_MAX_NUM,
 } CMD_ID;
 

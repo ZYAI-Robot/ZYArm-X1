@@ -10,11 +10,17 @@ software/examples/
 ├── camera_pick/
 │   ├── orbbec/              # Orbbec 相机抓取示例
 │   ├── deptrum/             # Deptrum 相机触摸/抓取参考示例
-│   └── handeye/             # RGB 手眼标定与颜色方块抓放示例
+│   ├── fixed_rgb_color_pick/ # 固定外部 RGB 相机颜色方块抓放示例
+│   └── wrist_rgb_aruco_pick/ # 腕部 RGB 相机 ArUco 方块抓放示例
 └── build.sh                 # Orbbec 示例构建脚本
 ```
 
-`camera_pick/handeye/` 是独立 Python 示例，不参与上面的 CMake 构建流程。安装与运行方式见该目录下的 `README.md`。
+`camera_pick/fixed_rgb_color_pick/` 和 `camera_pick/wrist_rgb_aruco_pick/` 是独立 Python 示例，不参与上面的 CMake 构建流程。
+
+- `fixed_rgb_color_pick/`：相机固定在机械臂外部，通过 ArUco/PnP 建立工作平面映射，再识别颜色块抓放。
+- `wrist_rgb_aruco_pick/`：相机安装在末端夹爪附近，每轮从固定观察姿态识别目标上的 ArUco，计算偏移后抓取并放置。
+
+安装与运行方式见各目录下的 README。
 
 ## 构建 Orbbec 示例
 

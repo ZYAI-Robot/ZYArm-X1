@@ -4,18 +4,23 @@ import sys
 import unittest
 from pathlib import Path
 
-import cv2
 import numpy as np
 
+try:
+    import cv2
+except ModuleNotFoundError:  # pragma: no cover - depends on local env
+    cv2 = None
 
-HAND_EYE_ROOT = Path(__file__).resolve().parents[1]
-SRC_DIR = HAND_EYE_ROOT / "src"
+
+FIXED_RGB_COLOR_PICK_ROOT = Path(__file__).resolve().parents[1]
+SRC_DIR = FIXED_RGB_COLOR_PICK_ROOT / "src"
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from block_vision import BlockVision
-from handeye_calibration import CalibrationResult, HandEyeCalibrator
-from zyarm_pick_controller import DEFAULT_CONFIG_PATH, load_handeye_config
+if cv2 is not None:
+    from color_block_vision import ColorBlockVision
+    from fixed_camera_calibration import CalibrationResult, FixedCameraCalibrator
+    from fixed_color_pick_controller import DEFAULT_CONFIG_PATH, load_fixed_rgb_color_pick_config
 
 
 CAMERA_MATRIX = np.array(
@@ -35,8 +40,8 @@ MARKERS = {
 }
 
 
-def _make_calibrator() -> HandEyeCalibrator:
-    return HandEyeCalibrator(
+def _make_calibrator() -> FixedCameraCalibrator:
+    return FixedCameraCalibrator(
         {
             "width": 640,
             "height": 480,
@@ -51,8 +56,8 @@ def _make_calibrator() -> HandEyeCalibrator:
     )
 
 
-def _make_rotated_board_calibrator() -> HandEyeCalibrator:
-    return HandEyeCalibrator(
+def _make_rotated_board_calibrator() -> FixedCameraCalibrator:
+    return FixedCameraCalibrator(
         {
             "width": 640,
             "height": 480,
@@ -78,7 +83,8 @@ class FakeDetector:
         return corners, ids, []
 
 
-class HandEyeCalibrationTests(unittest.TestCase):
+@unittest.skipIf(cv2 is None, "OpenCV is required for fixed RGB camera calibration tests")
+class FixedCameraCalibrationTests(unittest.TestCase):
     def setUp(self) -> None:
         self.calibrator = _make_calibrator()
         self.object_points = np.concatenate(
@@ -307,7 +313,7 @@ class HandEyeCalibrationTests(unittest.TestCase):
             )
 
     def test_plane_mapping_remains_accurate_with_imperfect_intrinsics(self) -> None:
-        wrong_intrinsics_calibrator = HandEyeCalibrator(
+        wrong_intrinsics_calibrator = FixedCameraCalibrator(
             {
                 "width": 640,
                 "height": 480,
@@ -369,7 +375,7 @@ class HandEyeCalibrationTests(unittest.TestCase):
 
     def test_placeholder_config_is_rejected_with_fill_hint(self) -> None:
         with self.assertRaisesRegex(ValueError, "Fill camera.camera_matrix"):
-            HandEyeCalibrator(
+            FixedCameraCalibrator(
                 {"camera_matrix": None, "dist_coeffs": None},
                 {
                     "dictionary": None,
@@ -402,12 +408,12 @@ class HandEyeCalibrationTests(unittest.TestCase):
 
 
 def run_live_debug() -> int:
-    camera, board, _task = load_handeye_config(DEFAULT_CONFIG_PATH)
-    vision = BlockVision(camera)
-    calibrator = HandEyeCalibrator(camera, board)
+    camera, board, _task = load_fixed_rgb_color_pick_config(DEFAULT_CONFIG_PATH)
+    vision = ColorBlockVision(camera)
+    calibrator = FixedCameraCalibrator(camera, board)
     try:
         vision.open()
-        window_name = "HandEye calibration"
+        window_name = "Fixed RGB camera calibration"
         cv2.namedWindow(window_name)
         observations: list[dict[int, np.ndarray]] = []
         while True:

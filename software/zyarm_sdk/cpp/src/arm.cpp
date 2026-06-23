@@ -130,6 +130,20 @@ std::optional<ArmState> ZyArm::query_state(std::chrono::milliseconds timeout)
   return state_from_frame(*frame, StateSource::Cmd6Query);
 }
 
+std::optional<ServoTemperatures> ZyArm::query_servo_temperatures(std::chrono::milliseconds timeout)
+{
+  const auto before = transport_->servo_temperature_sequence();
+  transport_->send_command(static_cast<int>(CommandId::Status), {1.0}, false);
+  auto frame = transport_->wait_for_servo_temperatures_after(before, timeout);
+  if (!frame.has_value()) {
+    return std::nullopt;
+  }
+  return ServoTemperatures{
+    frame->temperatures_c,
+    frame->received_at,
+    frame->raw_line};
+}
+
 FastIoResult ZyArm::fast_io(
   const JointArray & positions,
   const std::array<bool, kJointCount> & apply_mask,
@@ -201,6 +215,25 @@ ArmFrameStats ZyArm::get_frame_stats() const
 void ZyArm::reset_frame_stats()
 {
   transport_->reset_frame_stats();
+}
+
+void ZyArm::enable_serial_log(
+  const std::string & path,
+  bool include_tx,
+  bool include_rx,
+  std::optional<std::chrono::milliseconds> flush_interval)
+{
+  transport_->enable_serial_log(path, include_tx, include_rx, flush_interval);
+}
+
+void ZyArm::flush_serial_log()
+{
+  transport_->flush_serial_log();
+}
+
+void ZyArm::disable_serial_log()
+{
+  transport_->disable_serial_log();
 }
 
 std::shared_ptr<Transport> ZyArm::transport() const

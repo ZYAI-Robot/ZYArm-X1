@@ -3,6 +3,7 @@
 #include "arm_shell.h"
 #include "string.h"
 #include "arm_robot.h"
+#include "arm_monitor.h"
 
 #define ARM_KINEMATICS_LOG_TAG "KINEMATICS"
 
@@ -341,8 +342,24 @@ int arm_robot_ik(float x, float y, float z, float rx, float ry, float rz)
         return -1;
     }
 
+    arm_monitor_cancel_all_joint_motion();
     for (int i = 0; i < 6; i++) {
-        arm_set_joint_angle_interval_acc(i, solution[i], (int)roundf(interval_ms), ARM_DEFAULT_ACCEL_TIME, ARM_DEFAULT_ACCEL_TIME);
+        ret = arm_set_joint_angle_interval_acc_with_monitor_policy(
+            i,
+            solution[i],
+            (int)roundf(interval_ms),
+            ARM_DEFAULT_ACCEL_TIME,
+            ARM_DEFAULT_ACCEL_TIME,
+            ARM_MOTION_MONITOR_DISABLED
+        );
+        if (ret != 0) {
+            arm_monitor_cancel_all_joint_motion();
+            return ret;
+        }
+    }
+
+    for (int i = 0; i < 6; i++) {
+        arm_joint_arm_monitor(i, solution[i], ARM_MOTION_MONITOR_AUTO_HOLD);
     }
     return 0;
 }

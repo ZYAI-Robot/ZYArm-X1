@@ -2,6 +2,7 @@
 #include "arm_robot.h"
 #include "arm_shell.h"
 #include "arm_flash.h"
+#include "arm_w25q128_partition.h"
 #include "FreeRTOS.h"
 #include "task.h"
 #include "timers.h"
@@ -19,6 +20,78 @@ ArmRecorderParam g_arm_recorder_param = {
     .player_interval_ms = 10,
 };
 
+static uint32_t arm_record_flash_slot_offset(int index)
+{
+    return (uint32_t)index * ARM_RECORD_MANAGER_FLASH_SIZE;
+}
+
+int arm_record_flash_validate_capacity(void)
+{
+    uint32_t required_size = ARM_RECORD_MANAGER_FLASH_SIZE * ARM_RECORD_MAX_NUMS;
+    uint32_t partition_size = arm_w25q128_partition_size(ARM_W25Q128_MODULE_RECORDER);
+
+    if (!arm_w25q128_partition_is_ready()) {
+        ARM_LOGE_TAG(ARM_RECORD_LOG_TAG, "W25Q128 partition table is not ready\n");
+        return -1;
+    }
+
+    if (required_size > partition_size) {
+        ARM_LOGE_TAG(
+            ARM_RECORD_LOG_TAG,
+            "Recorder partition too small, required %lu bytes, actual %lu bytes\n",
+            (unsigned long)required_size,
+            (unsigned long)partition_size
+        );
+        return -1;
+    }
+
+    return 0;
+}
+
+static int arm_record_flash_read_slot(int index, uint32_t offset, void *data, uint32_t len)
+{
+    uint32_t slot_offset;
+
+    if ((index < 0) || (index >= (int)ARM_RECORD_MAX_NUMS)) {
+        return -1;
+    }
+
+    if ((offset > ARM_RECORD_MANAGER_FLASH_SIZE) || (len > (ARM_RECORD_MANAGER_FLASH_SIZE - offset))) {
+        return -1;
+    }
+
+    slot_offset = arm_record_flash_slot_offset(index) + offset;
+    return arm_w25q128_partition_read(ARM_W25Q128_MODULE_RECORDER, slot_offset, data, len, 1000);
+}
+
+static int arm_record_flash_write_slot(int index, uint32_t offset, const void *data, uint32_t len)
+{
+    uint32_t slot_offset;
+
+    if ((index < 0) || (index >= (int)ARM_RECORD_MAX_NUMS)) {
+        return -1;
+    }
+
+    if ((offset > ARM_RECORD_MANAGER_FLASH_SIZE) || (len > (ARM_RECORD_MANAGER_FLASH_SIZE - offset))) {
+        return -1;
+    }
+
+    slot_offset = arm_record_flash_slot_offset(index) + offset;
+    return arm_w25q128_partition_write(ARM_W25Q128_MODULE_RECORDER, slot_offset, data, len, 1000);
+}
+
+static int arm_record_flash_erase_slot(int index)
+{
+    if ((index < 0) || (index >= (int)ARM_RECORD_MAX_NUMS)) {
+        return -1;
+    }
+
+    return arm_w25q128_partition_erase(ARM_W25Q128_MODULE_RECORDER,
+                                       arm_record_flash_slot_offset(index),
+                                       ARM_RECORD_MANAGER_FLASH_SIZE,
+                                       1000);
+}
+
 static bool arm_record_check_name(const char *name)
 {
     if (name == NULL || strlen(name) == 0) {
@@ -28,8 +101,8 @@ static bool arm_record_check_name(const char *name)
 
     for (int i = 0; i < ARM_RECORD_MAX_NUMS; i++) {
         ArmRecordHead head = {0};
-        HAL_StatusTypeDef ret = W25Q128_Read(i * ARM_RECORD_MANAGER_FLASH_SIZE, (uint8_t *)&head, sizeof(ArmRecordHead), 1000);
-        if (ret != HAL_OK) {
+        int ret = arm_record_flash_read_slot(i, 0U, &head, sizeof(ArmRecordHead));
+        if (ret != 0) {
             ARM_LOGE_TAG(ARM_RECORD_LOG_TAG, "Failed to read the action head information\n");
             return false;    
         }
@@ -47,15 +120,15 @@ static int arm_record_manger_get(const char *name)
     int index = 0;
     ArmRecordHead head = {0};
     for (index = 0; index < ARM_RECORD_MAX_NUMS; index++) {
-        HAL_StatusTypeDef ret = W25Q128_Read(index * ARM_RECORD_MANAGER_FLASH_SIZE, (uint8_t *)&head, sizeof(ArmRecordHead), 1000);
-        if (ret != HAL_OK) {
+        int ret = arm_record_flash_read_slot(index, 0U, &head, sizeof(ArmRecordHead));
+        if (ret != 0) {
             ARM_LOGE_TAG(ARM_RECORD_LOG_TAG, "Failed to read the action head information\n");
             return -1;    
         }
 
         if ((head.state == ARM_RECORD_STATUS_VALID) && (strlen(head.name) > 0) && (strcmp(head.name, name) == 0)) {
-            ret = W25Q128_Read(index * ARM_RECORD_MANAGER_FLASH_SIZE, (uint8_t *)&g_record_manager, sizeof(ArmRecordManager), 1000);
-            if (ret != HAL_OK) {
+            ret = arm_record_flash_read_slot(index, 0U, &g_record_manager, sizeof(ArmRecordManager));
+            if (ret != 0) {
                 ARM_LOGE_TAG(ARM_RECORD_LOG_TAG, "Failed to read the action recording information\n");
                 return -1;    
             }
@@ -154,8 +227,8 @@ void arm_record_manger_list(uint32_t cmd_id)
     int count = 0;
     send_string_response(cmd_id, "arm record list:\n");
     for (index = 0; index < ARM_RECORD_MAX_NUMS; index++) {
-        HAL_StatusTypeDef ret = W25Q128_Read(index * ARM_RECORD_MANAGER_FLASH_SIZE, (uint8_t *)&head, sizeof(ArmRecordHead), 1000);
-        if (ret != HAL_OK) {
+        int ret = arm_record_flash_read_slot(index, 0U, &head, sizeof(ArmRecordHead));
+        if (ret != 0) {
             ARM_LOGE_TAG(ARM_RECORD_LOG_TAG, "Failed to read the action head information\n");
             continue;    
         }
@@ -202,12 +275,12 @@ int arm_record_flash_erase(const char *name)
     if (strcmp(name, "all") == 0) {
         // 擦除所有动作录制相关扇区
         for (int index = 0; index < ARM_RECORD_MAX_NUMS; index++) {
-            HAL_StatusTypeDef ret = W25Q128_EraseSectors(index * ARM_RECORD_MANAGER_FLASH_SIZE, ARM_RECORD_MANAGER_FLASH_SIZE, 1000);
-            if (ret != HAL_OK) {
+            int ret = arm_record_flash_erase_slot(index);
+            if (ret != 0) {
                 ARM_LOGE_TAG(
                     ARM_RECORD_LOG_TAG,
                     "Failed to erase the action recording information from FLASH%d\n",
-                    index * ARM_RECORD_MANAGER_FLASH_SIZE
+                    arm_record_flash_slot_offset(index)
                 );
                 return -1;
             }
@@ -219,20 +292,20 @@ int arm_record_flash_erase(const char *name)
     int index = 0;
     ArmRecordHead head = {0};
     for (index = 0; index < ARM_RECORD_MAX_NUMS; index++) {
-        HAL_StatusTypeDef ret = W25Q128_Read(index * ARM_RECORD_MANAGER_FLASH_SIZE, (uint8_t *)&head, sizeof(ArmRecordHead), 1000);
-        if (ret != HAL_OK) {
+        int ret = arm_record_flash_read_slot(index, 0U, &head, sizeof(ArmRecordHead));
+        if (ret != 0) {
             ARM_LOGE_TAG(ARM_RECORD_LOG_TAG, "Failed to read the action head information\n");
             return -1;
         }
 
         if ((head.state == ARM_RECORD_STATUS_VALID) && (strlen(head.name) > 0) && (strcmp(head.name, name) == 0)) {
             // 找到对应录制并擦除
-            HAL_StatusTypeDef ret = W25Q128_EraseSectors(index * ARM_RECORD_MANAGER_FLASH_SIZE, ARM_RECORD_MANAGER_FLASH_SIZE, 1000);
-            if (ret != HAL_OK) {
+            ret = arm_record_flash_erase_slot(index);
+            if (ret != 0) {
                 ARM_LOGE_TAG(
                     ARM_RECORD_LOG_TAG,
                     "Failed to erase the action recording information from FLASH%d\n",
-                    index * ARM_RECORD_MANAGER_FLASH_SIZE
+                    arm_record_flash_slot_offset(index)
                 );
                 return -1;
             }
@@ -249,8 +322,8 @@ int arm_record_flash_malloc(void)
     int index = 0;
     ArmRecordHead head = {0};
     for (index = 0; index < ARM_RECORD_MAX_NUMS; index++) {
-        HAL_StatusTypeDef ret = W25Q128_Read(index * ARM_RECORD_MANAGER_FLASH_SIZE, (uint8_t *)&head, sizeof(ArmRecordHead), 1000);
-        if (ret != HAL_OK) {
+        int ret = arm_record_flash_read_slot(index, 0U, &head, sizeof(ArmRecordHead));
+        if (ret != 0) {
             ARM_LOGE_TAG(ARM_RECORD_LOG_TAG, "Failed to read the action head information\n");
             return -1;    
         }
@@ -274,8 +347,8 @@ static int arm_record_save(void)
         return -1;
     }
     
-    HAL_StatusTypeDef ret = W25Q128_Write(index * ARM_RECORD_MANAGER_FLASH_SIZE, (uint8_t *)&g_record_manager, sizeof(ArmRecordManager), 1000);
-    if (ret != HAL_OK) {
+    int ret = arm_record_flash_write_slot(index, 0U, &g_record_manager, sizeof(ArmRecordManager));
+    if (ret != 0) {
         ARM_LOGE_TAG(ARM_RECORD_LOG_TAG, "Failed to write the action recording information to FLASH\n");
         return -1;
     }
